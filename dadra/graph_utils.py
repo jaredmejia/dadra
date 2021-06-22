@@ -4,13 +4,11 @@ import numpy as np
 
 
 def plot_sample(sample, fig_name):
-    """
-    Plots a sample of shape (num_items, 3) in 3D.
+    """Plots a sample of shape (num_items, 3) in 3D
 
-    :param sample: Sample from dynamical system (num_samples, n_x).
+    :param sample: Sample from dynamical system (num_samples, n_x)
     :type sample: numpy.ndarray
-
-    :param fig_name: The name of the file to save the plot to.
+    :param fig_name: The name of the file to save the plot to
     :type fig_name: string
     """
     fig, axs = plt.subplots(3, figsize=(5, 15))
@@ -42,54 +40,39 @@ def plot_contour_2D(
     x_cont=None,
     x_level=None,
 ):
-    """
-    Plots the contours provided (output of utils.compute_contour) in 2D.
+    """Plots the contours provided (output of utils.compute_contour) in 2D
 
-    :param xv1: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector repeated along the first dimension.
+    :param xv1: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector repeated along the first dimension
     :type xv1: numpy.ndarray
-
-    :param yv1: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector repeated along the first dimension.
+    :param yv1: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector repeated along the first dimension
     :type yv1: numpy.ndarray
-
-    :param z_cont: A (grid_n, grid_n) matrix, each point a function of xv1 and yv1.
+    :param z_cont: A (grid_n, grid_n) matrix, each point a function of xv1 and yv1
     :type z_cont: numpy.ndarray
-
-    :param z_level: The z-value at which the level set is to be drawn.
+    :param z_level: The z-value at which the level set is to be drawn
     :type z_level: float
-
-    :param sample: Sample from dynamical system (num_samples, n_x).
+    :param sample: Sample from dynamical system (num_samples, n_x)
     :type sample: numpy.ndarray
-
-    :param fig_name: The name of the file to save the plot to.
+    :param fig_name: The name of the file to save the plot to
     :type fig_name: string
-
-    :param xv2: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector
-    repeated along the first dimension.
-    :type xv2: numpy.ndarray
-
+    :param xv2: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector repeated along the first dimension, defaults to None
+    :type xv2: numpy.ndarray, optional
     :param zv1: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector
-    repeated along the first dimension.
-    :type zv1: numpy.ndarray
-
-    :param y_cont: A (grid_n, grid_n) matrix, each point a function of xv2 and zv1.
-    :type y_cont: numpy.ndarray
-
-    :param y_level: The y-value at which the level set is to be drawn.
-    :type y_level: float
-
+    repeated along the first dimension, defaults to None
+    :type zv1: numpy.ndarray, optional
+    :param y_cont: A (grid_n, grid_n) matrix, each point a function of xv2 and zv1, defaults to None
+    :type y_cont: numpy.ndarray, optional
+    :param y_level: The y-value at which the level set is to be drawn, defaults to None
+    :type y_level: float, optional
     :param yv2: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector
-    repeated along the first dimension.
-    :type yv2: numpy.ndarray
-
+    repeated along the first dimension, defaults to None
+    :type yv2: numpy.ndarray, optional
     :param zv2: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector
-    repeated along the first dimension.
-    :type zv2: numpy.ndarray
-
-    :param x_cont: A (grid_n, grid_n) matrix, each point a function of yv2 and zv2.
-    :type x_cont: numpy.ndarray
-
-    :param x_level: The x-value at which the level set is to be drawn.
-    :type x_level: float
+    repeated along the first dimension, defaults to None
+    :type zv2: numpy.ndarray, optional
+    :param x_cont: A (grid_n, grid_n) matrix, each point a function of yv2 and zv2, defaults to None
+    :type x_cont: numpy.ndarray, optional
+    :param x_level: The x-value at which the level set is to be drawn, defaults to None
+    :type x_level: float, optional
     """
     if y_cont is not None and x_cont is not None:
         fig, axs = plt.subplots(3, figsize=(5, 15))
@@ -143,50 +126,30 @@ def plot_contour_3D(
     yv2=None,
     z_cont2=None,
 ):
-    """
-    Plots the contours in 3D with the option for saving an animated gif of the rotating graph.
+    """Plots the contours in 3D with the option for saving an animated gif of the rotating graph
 
-    :param xv1: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector
-    repeated along the first dimension.
-    :type xv1: numpy.ndarray
-
-    :param yv1: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector
-    repeated along the first dimension.
-    :type yv1: numpy.ndarray
-
-    :param z_cont: A (grid_n, grid_n) matrix, each point a function of xv1 and yv1 (corresponding to
-    the maximum optimal solutions that satisfy the p-norm).
+    :param xv: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector repeated along the first dimension
+    :type xv: numpy.ndarray
+    :param yv: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector repeated along the first dimension
+    :type yv: numpy.ndarray
+    :param z_cont: A (grid_n, grid_n) matrix, each point a function of xv1 and yv1 (corresponding to the maximum optimal solutions that satisfy the p-norm)
     :type z_cont: numpy.ndarray
-
-    :param z_level: The z-value at which the level set is to be drawn.
-    :type z_level: float
-
-    :param z_min: The minimum z-value of the samples.
+    :param z_min: The minimum z-value
     :type z_min: float
-
-    :param z_max: The maximum z-value of the samples.
+    :param z_max: The maximum z-value
     :type z_max: float
-
-    :param sample: Sample from dynamical system (num_samples, n_x).
+    :param sample: Sample from dynamical system (num_samples, n_x)
     :type sample: numpy.ndarray
-
-    :param fig_name: The name of the file to save the plot to.
+    :param fig_name: The name of the file to save the plot to
     :type fig_name: string
-
-    :param fig_name: The name of the file to save the gif to.
-    :type fig_name: string
-
-    :param xv2: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector
-    repeated along the first dimension.
-    :type xv2: numpy.ndarray
-
-    :param yv2: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector
-    repeated along the first dimension.
-    :type yv2: numpy.ndarray
-
-    :param z_cont2: A (grid_n, grid_n) matrix, each point a function of xv2 and yv2 (corresponding to
-    the minimum optimal solutions that satisfy the p-norm).
-    :type z_cont2: numpy.ndarray
+    :param gif_name: The name of the file to save the gif to, defaults to None
+    :type gif_name: string, optional
+    :param xv2: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector repeated along the first dimension, defaults to None
+    :type xv2: numpy.ndarray, optional
+    :param yv2: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector repeated along the first dimension, defaults to None
+    :type yv2: numpy.ndarray, optional
+    :param z_cont2: A (grid_n, grid_n) matrix, each point a function of xv2 and yv2 (corresponding to the minimum optimal solutions that satisfy the p-norm), defaults to None
+    :type z_cont2: numpy.ndarray, optional
     """
     fig = plt.figure(figsize=(10, 10))
     ax = plt.axes(projection="3d")
