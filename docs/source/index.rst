@@ -10,7 +10,9 @@ Welcome to DaDRA's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-
+   intro 
+   dadra 
+   examples
 
 Indices and tables
 ==================

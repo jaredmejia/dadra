@@ -45,12 +45,10 @@ def plot_contour_2D(
     """
     Plots the contours provided (output of utils.compute_contour) in 2D.
 
-    :param xv1: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector
-    repeated along the first dimension.
+    :param xv1: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector repeated along the first dimension.
     :type xv1: numpy.ndarray
 
-    :param yv1: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector
-    repeated along the first dimension.
+    :param yv1: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector repeated along the first dimension.
     :type yv1: numpy.ndarray
 
     :param z_cont: A (grid_n, grid_n) matrix, each point a function of xv1 and yv1.

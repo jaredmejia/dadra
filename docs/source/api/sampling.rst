@@ -1,1 +1,0 @@
-.. currentmodule:: dadra.sampling
