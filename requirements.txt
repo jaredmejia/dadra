@@ -1,4 +1,5 @@
 cvxpy
+karma-sphinx-theme
 matplotlib
 numpy
 scipy
