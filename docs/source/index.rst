@@ -7,7 +7,7 @@ Welcome to DaDRA's documentation!
 =================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
    :caption: Contents:
 
    intro 
