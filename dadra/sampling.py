@@ -9,7 +9,6 @@ from scipy.integrate import odeint
 def num_samples(epsilon, delta, n_x=3, const=None):
     """Compute the number of samples needed to satisfy the specified probabilistic guarantees.
 
-
     :param epsilon: The accuracy parameter
     :type epsilon: float
     :param delta: The confidence parameter

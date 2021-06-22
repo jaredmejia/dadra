@@ -122,8 +122,6 @@ def plot_contour_3D(
     sample,
     fig_name,
     gif_name=None,
-    xv2=None,
-    yv2=None,
     z_cont2=None,
 ):
     """Plots the contours in 3D with the option for saving an animated gif of the rotating graph
@@ -144,18 +142,13 @@ def plot_contour_3D(
     :type fig_name: string
     :param gif_name: The name of the file to save the gif to, defaults to None
     :type gif_name: string, optional
-    :param xv2: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector repeated along the first dimension, defaults to None
-    :type xv2: numpy.ndarray, optional
-    :param yv2: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector repeated along the first dimension, defaults to None
-    :type yv2: numpy.ndarray, optional
-    :param z_cont2: A (grid_n, grid_n) matrix, each point a function of xv2 and yv2 (corresponding to the minimum optimal solutions that satisfy the p-norm), defaults to None
+    :param z_cont2: A (grid_n, grid_n) matrix, each point a function of xv and yv (corresponding to the minimum optimal solutions that satisfy the p-norm), defaults to None
     :type z_cont2: numpy.ndarray, optional
     """
     fig = plt.figure(figsize=(10, 10))
     ax = plt.axes(projection="3d")
     v_min = z_min - 0.25 * (z_max - z_min)
     v_max = z_max + 0.25 * (z_max - z_min)
-    data_2 = [xv2, yv2, z_cont2]
     ax.scatter3D(
         sample[:, 0],
         sample[:, 1],
@@ -165,8 +158,7 @@ def plot_contour_3D(
         vmin=v_min,
         vmax=z_max,
     )
-
-    if all(d is None for d in data_2):
+    if z_cont2 is None:
         ax.contour3D(
             xv, yv, z_cont, 50, cmap="Blues", vmin=v_min, vmax=v_max, alpha=0.8
         )
@@ -187,8 +179,8 @@ def plot_contour_3D(
             levels=levels_1,
         )
         ax.contour3D(
-            xv2,
-            yv2,
+            xv,
+            yv,
             z_cont2,
             50,
             cmap="Blues",

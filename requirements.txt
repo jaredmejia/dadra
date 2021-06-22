@@ -3,3 +3,4 @@ karma-sphinx-theme
 matplotlib
 numpy
 scipy
+-e.
