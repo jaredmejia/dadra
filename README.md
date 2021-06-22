@@ -9,6 +9,7 @@ $ pip install --upgrade dadra
 
 ## Resources
 * [PyPi](https://pypi.org/project/dadra/)
+* [Documentation](https://dadra.readthedocs.io/en/latest/)
 * [Issue tracking](https://github.com/JaredMejia/dadra/issues)
 
 ## License
