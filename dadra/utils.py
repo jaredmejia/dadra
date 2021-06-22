@@ -59,8 +59,7 @@ def p_norm_cont(arr, axis, default_val, n_x, A_val, b_val, p, minimum=True):
     :type b_val: numpy.ndarray
     :param p: The order of p-norm
     :type p: int
-    :param minimum: True if optimizing for the minimal value of the dependent variable
-    that satisfies the p-norm conditions, defaults to True
+    :param minimum: True if optimizing for the minimal value of the dependent variable that satisfies the p-norm conditions, defaults to True
     :type minimum: bool, optional
     :return: The value at the specified axis which corresponds the the optimal value of the (n_x, 1) vector that satisfies the p-Norm Ball conditions at the specified axis
     :rtype: float
@@ -94,8 +93,7 @@ def p_norm_cont_proj(arr, axis, default_val, n_x, A_val, b_val, p):
     :type arr: numpy.ndarray
     :param axis: The axis of the dependent variable for which to solve for (i.e. z -> axis=2).
     :type axis: int
-    :param default_val: The value to return if no solution for the dependent variable
-    is found that satisfies the p-norm conditions.
+    :param default_val: The value to return if no solution for the dependent variable is found that satisfies the p-norm conditions.
     :type default_val: float
     :param n_x: The state dimension.
     :type n_x: int
@@ -204,8 +202,7 @@ def compute_contour_3D(sample, A_val, b_val, cont_axis=2, n_x=3, p=2, grid_n=200
     :type p: int, optional
     :param grid_n: The side length of the cube of points to be used for computing contours, defaults to 200
     :type grid_n: int, optional
-    :param minimum: True if optimizing for the minimal value of the dependent variable
-    that satisfies the p-norm conditions, defaults to True
+    :param minimum: True if optimizing for the minimal value of the dependent variable that satisfies the p-norm conditions, defaults to True
     :type minimum: bool, optional
     :return: The meshgrid, corresponding computed contour, and the extremum values for the chosen axis
     :rtype: tuple

@@ -56,18 +56,15 @@ def plot_contour_2D(
     :type fig_name: string
     :param xv2: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector repeated along the first dimension, defaults to None
     :type xv2: numpy.ndarray, optional
-    :param zv1: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector
-    repeated along the first dimension, defaults to None
+    :param zv1: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector repeated along the first dimension, defaults to None
     :type zv1: numpy.ndarray, optional
     :param y_cont: A (grid_n, grid_n) matrix, each point a function of xv2 and zv1, defaults to None
     :type y_cont: numpy.ndarray, optional
     :param y_level: The y-value at which the level set is to be drawn, defaults to None
     :type y_level: float, optional
-    :param yv2: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector
-    repeated along the first dimension, defaults to None
+    :param yv2: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector repeated along the first dimension, defaults to None
     :type yv2: numpy.ndarray, optional
-    :param zv2: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector
-    repeated along the first dimension, defaults to None
+    :param zv2: A (grid_n, grid_n) matrix with the elements of a (grid_n, 1) vector repeated along the first dimension, defaults to None
     :type zv2: numpy.ndarray, optional
     :param x_cont: A (grid_n, grid_n) matrix, each point a function of yv2 and zv2, defaults to None
     :type x_cont: numpy.ndarray, optional

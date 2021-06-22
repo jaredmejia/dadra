@@ -1,9 +1,6 @@
 dadra package
 =============
 
-Submodules
-----------
-
 dadra.graph\_utils module
 -------------------------
 
@@ -24,14 +21,6 @@ dadra.utils module
 ------------------
 
 .. automodule:: dadra.utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: dadra
    :members:
    :undoc-members:
    :show-inheritance:
