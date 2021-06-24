@@ -9,6 +9,14 @@ dadra.graph\_utils module
    :undoc-members:
    :show-inheritance:
 
+dadra.pnorm module
+------------------
+
+.. automodule:: dadra.pnorm
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 dadra.sampling module
 ---------------------
 
@@ -21,6 +29,14 @@ dadra.utils module
 ------------------
 
 .. automodule:: dadra.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: dadra
    :members:
    :undoc-members:
    :show-inheritance:
