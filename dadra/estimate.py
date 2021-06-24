@@ -3,8 +3,6 @@ import numpy as np
 import time
 import warnings
 
-from numpy.linalg.linalg import norm
-
 from dyn_sys import DynamicSystem
 from graph_utils import plot_contour_2D, plot_contour_3D, plot_sample
 from sampling import num_samples
@@ -18,6 +16,22 @@ from utils import (
 
 
 class Estimator:
+    """Class which allows for estimation of the reachable sets for a given dynamical system.
+
+    :param dyn_sys: An instance of :class:`dadra.DynamicSystem`
+    :type dyn_sys: DynamicSystem
+    :param epsilon: The accuracy parameter, defaults to 0.05
+    :type epsilon: float, optional
+    :param delta: The confidence parameter, defaults to 1e-9
+    :type delta: float, optional
+    :param p: The order of p-norm, defaults to 2
+    :type p: int, optional
+    :param const: The constraints placed on the parameters A and b, defaults to None
+    :type const: string, optional
+    :param normalize: If true, the sample is normalized, defaults to True
+    :type normalize: bool, optional
+    """
+
     def __init__(
         self,
         dyn_sys: DynamicSystem,
@@ -27,6 +41,7 @@ class Estimator:
         const=None,
         normalize=True,
     ):
+
         self.dyn_sys = dyn_sys
         self.check_sys()
 
@@ -54,6 +69,33 @@ class Estimator:
         const=None,
         normalize=True,
     ):
+        """Class method that allows for an instance of :class:`dadra.Estimator` to be initialized
+        using a dynamic function, and the components for an instance of :class:`DynamicSystem`
+        rather than explicitly passing in a :class:`DynamicSystem` object
+
+        :param dyn_func: The function defining the dynamics of the system
+        :type dyn_func: function
+        :param intervals: The intervals corresponding to the possible values of the initial states of the variables in the system
+        :type intervals: list
+        :param state_dim: The degrees of freedom of the system
+        :type state_dim: int
+        :param timesteps: The number of timesteps over which to compute the sample, defaults to 100
+        :type timesteps: int, optional
+        :param parts: The number of parts to partition the time interval into for computing the sample, defaults to 1001
+        :type parts: int, optional
+        :param epsilon: The accuracy parameter, defaults to 0.05
+        :type epsilon: float, optional
+        :param delta: The confidence parameter, defaults to 1e-9
+        :type delta: float, optional
+        :param p: The order of p-norm, defaults to 2
+        :type p: int, optional
+        :param const: The constraints placed on the parameters A and b, defaults to None
+        :type const: string, optional
+        :param normalize: If true, the sample is normalized, defaults to True
+        :type normalize: bool, optional
+        :return: A :class:`dadra.Estimator` object
+        :rtype: :class:`dadra.Estimator`
+        """
         dyn_sys = DynamicSystem(dyn_func, intervals, state_dim, timesteps, parts)
         return cls(dyn_sys, epsilon, delta, p, const, normalize)
 
@@ -70,18 +112,57 @@ class Estimator:
         const=None,
         normalize=True,
     ):
+        """Class method that allows for an instance of :class:`dadra.Estimator` to be initialized
+        using a list of dynamic functions, and the components for an instance of :class:`DynamicSystem`
+        rather than explicitly passing in a :class:`DynamicSystem` object
+
+        :param dyn_func: The list of functions, one for each variable, that define the dynamics of the system
+        :type dyn_func: function
+        :param intervals: The intervals corresponding to the possible values of the initial states of the variables in the system
+        :type intervals: list
+        :param timesteps: The number of timesteps over which to compute the sample, defaults to 100
+        :type timesteps: int, optional
+        :param parts: The number of parts to partition the time interval into for computing the sample, defaults to 1001
+        :type parts: int, optional
+        :param epsilon: The accuracy parameter, defaults to 0.05
+        :type epsilon: float, optional
+        :param delta: The confidence parameter, defaults to 1e-9
+        :type delta: float, optional
+        :param p: The order of p-norm, defaults to 2
+        :type p: int, optional
+        :param const: The constraints placed on the parameters A and b, defaults to None
+        :type const: string, optional
+        :param normalize: If true, the sample is normalized, defaults to True
+        :type normalize: bool, optional
+        :return: A :class:`dadra.Estimator` object
+        :rtype: :class:`dadra.Estimator`
+        """
         dyn_sys = DynamicSystem.get_system(func_list, intervals, timesteps, parts)
         return cls(dyn_sys, epsilon, delta, p, const, normalize)
 
     def check_sys(self):
+        """Checks whether the dynamic system passed to the constructor is valid
+
+        :raises TypeError: If an object of type other than :class:`dadra.DynamicSystem` is passed
+        """
         if not isinstance(self.dyn_sys, DynamicSystem):
             raise TypeError("Object of type DynamicSystem must be passed")
 
     def get_num_samples(self):
+        """Compute the number of samples needed to satisfy the specified probabilistic guarantees
+
+        :return: The number of samples needed to satisfy the specified probabilistic guarantees
+        :rtype: int
+        """
         n_x = self.dyn_sys.state_dim
         return num_samples(self.epsilon, self.delta, n_x, self.const)
 
     def get_sample(self):
+        """Draws the number of samples necessary to satisfy the specified probabilistic guarantees
+
+        :return: Array of samples
+        :rtype: numpy.ndarray
+        """
         print(f"Drawing {self.num_samples} samples")
         start_sampling = time.perf_counter()
         samples = self.dyn_sys.sample_system(self.num_samples)
@@ -96,6 +177,11 @@ class Estimator:
         return samples
 
     def solve_p(self):
+        """Solves for the optimal p-norm ball that estimates the reachable set
+
+        :return: The matrix corresponding to parameter A of the p-norm ball, the vector corresponding to parameter b of the p-norm ball, and the status of the optimization problem
+        :rtype: tuple
+        """
         print(f"Solving for optimal p-norm ball (p={self.p})")
         start_time = time.perf_counter()
         A, b, status = solve_p_norm(
@@ -111,6 +197,11 @@ class Estimator:
         return A, b, status
 
     def empirical_estimate(self, num_samples_emp=None):
+        """Computes the ratio of samples within the estimated reachable set
+
+        :param num_samples_emp: The number of samples to draw for the empirical estimate, defaults to the number of samples drawn to obtain the p-norm ball
+        :type num_samples_emp: int, optional
+        """
         if self.status != "optimal":
             warnings.warn(
                 "Non-optimal solution to p-norm ball. Empirical estimate may be innaccurate"
@@ -139,6 +230,7 @@ class Estimator:
         print(f"Ratio of samples within the estimated reachability set: {ratio}")
 
     def summary(self):
+        """Prints a summary of the attributes of this instance of :class:`Estimator`"""
         summary_str = (
             "----------------------------------------------------------------" + "\n"
         )
@@ -159,9 +251,21 @@ class Estimator:
         print(summary_str)
 
     def plot_samples(self, fig_name):
+        """Plots the samples of of shape (num_items, 3) in 3D
+
+        :param fig_name: The name of the file to save the plot to
+        :type fig_name: string
+        """
         plot_sample(self.samples, fig_name)
 
-    def plot_2D_cont(self, grid_n, fig_name):
+    def plot_2D_cont(self, fig_name, grid_n=200):
+        """Computes the contours of the reachable set and plots them in 2D
+
+        :param fig_name: The name of the file to save the plot to
+        :type fig_name: string
+        :param grid_n: The side length of the cube of points to be used for computing contours, defaults to 200
+        :type grid_n: int
+        """
         cont_compute = partial(
             compute_contour_2D,
             sample=self.samples,
@@ -197,7 +301,16 @@ class Estimator:
             x_level=x_max,
         )
 
-    def plot_3D_cont(self, grid_n, fig_name, gif_name=None):
+    def plot_3D_cont(self, fig_name, grid_n=100, gif_name=None):
+        """Computes and plots the contours in 3D with the option for saving an animated gif of the rotating graph
+
+        :param fig_name: The name of the file to save the plot to
+        :type fig_name: string
+        :param grid_n: The side length of the cube of points to be used for computing contours, defaults to 100
+        :type grid_n: int
+        :param gif_name: The name of the file to save the gif to, defaults to None
+        :type gif_name: string, optional
+        """
         print("Computing 3D contour")
         cont_start = time.perf_counter()
         d0, d1, cont_min, cont_max, c_min, c_max = compute_contour_3D(

@@ -1,18 +1,27 @@
 DaDRA package
 =============
 
-dadra.graph\_utils module
--------------------------
 
-.. automodule:: dadra.graph_utils
+dadra.dyn\_sys module
+---------------------
+
+.. automodule:: dadra.dyn_sys
    :members:
    :undoc-members:
    :show-inheritance:
 
-dadra.pnorm module
-------------------
+dadra.estimate module
+---------------------
 
-.. automodule:: dadra.pnorm
+.. automodule:: dadra.estimate
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+dadra.graph\_utils module
+-------------------------
+
+.. automodule:: dadra.graph_utils
    :members:
    :undoc-members:
    :show-inheritance:
@@ -33,10 +42,3 @@ dadra.utils module
    :undoc-members:
    :show-inheritance:
 
-Module contents
----------------
-
-.. automodule:: dadra
-   :members:
-   :undoc-members:
-   :show-inheritance:

@@ -282,7 +282,7 @@ def compute_contour_3D(sample, A_val, b_val, cont_axis=2, n_x=3, p=2, grid_n=200
 
 
 def empirical_estimate(samples, A_val, b_val, n_x=3, p=2):
-    """Computes the ratio of samples within the estimated reachability set
+    """Computes the ratio of samples within the estimated reachable set
 
     :param samples: Sample from dynamical system (num_samples, n_x)
     :type samples: numpy.ndarray
