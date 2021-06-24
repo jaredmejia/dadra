@@ -1,24 +1,16 @@
 Introduction
 ============
 
-``simpleble`` is a high-level OO Python package which aims to provide an easy and intuitive way of interacting with nearby Bluetooth Low Energy (BLE) devices (GATT servers). In essence, this package is an extension of the ``bluepy`` package created by Ian Harvey (see `here <https://github.com/IanHarvey/bluepy/>`_)
-
-The aim here was to define a single object which would allow users to perform the various operations performed by the ``bluepy.btle.Peripheral``, ``bluepy.btle.Scanner``, ``bluepy.btle.Service`` and ``bluepy.btle.Characteristic`` classes of ``bluepy``, from one central place. This functionality is facilitated by the ``simpleble.SimpleBleClient`` and ``simpleble.SimpleBleDevice`` classes, where the latter is an extention/subclass of ``bluepy.btle.Peripheral``, combined with properties of ``bluepy.btle.ScanEntry``.
-
-The current implementation has been developed in Python 3 and tested on a Raspberry Pi Zero W, running Raspbian 9 (stretch), but should work with Python 2.7+ (maybe with minor modifications in terms of printing and error handling) and most Debian based OSs.
+`DaDRA <https://github.com/JaredMejia/dadra>`_  (day-druh) is a Python library for Data-Driven Reachability Analysis. The main goal of the package is to accelerate the process of computing estimates of forward reachable sets for a given dynamical system.
 
 Motivation
 **********
 
-As a newbie experimenter/hobbyist in the field of IoT using BLE communications, I found it pretty hard to identify a Python package which would enable one to use a Raspberry Pi (Zero W inthis case) to swiftly scan, connect to and read/write from/to a nearby BLE device (GATT server).
-
-This package is intended to provide a quick, as well as (hopefully) easy to undestand, way of getting a simple BLE GATT client up and running, for all those out there, who, like myself, are hands-on learners and are eager to get their hands dirty from early on.
+Currently, there are no prominent Python libraries in use for Data-Driven Reachability Analysis, as most exist strictly in MATLAB. With the ever increasing popularity of the Python language, DaDRA takes advantage of the many open-source Python libraries already well established, such as ``cvxpy`` and ``scipy``, and applies them to the domain of control theory.
 
 Limitations
 ***********
 
-- As my main use-case scenario was to simply connect two devices, the current version of :class:`simpleble.SimpleBleClient` has been designed and implemented with this use-case in mind. As such, if you are looking for a package to allow you to connect to multiple devices, then know that off-the-self this package DOES NOT allow you to do so. However, implementing such a feature is an easily achievable task, which has been planned for sometime in the near future and if there proves to be interest on the project, I would be happy to speed up the process.
-
-- Only Read and Write operations are currently supported, but I am planning on adding Notifications soon.
-
-- Although the interfacing operations of the :class:`bluepy.btle.Service` and :class:`bluepy.btle.Peripheral` classes have been brought forward to the :class:`simpleble.SimpleBleClient` class, the same has not been done for the :class:`bluepy.btle.Descriptor`, meaning that the :class:`simpleble.SimpleBleClient` cannot be used to directly access the Descriptors. This can however be done easily by obtaining a handle of a :class:`simpleble.SimpleBleDevice` object and calling the superclass :meth:`bluepy.btle.Peripheral.getDescriptors` method.
+- As this library is still young, there is currently limited support for certain types of dynamical systems. Further improvements can be made to :class:`dadra.DynamicSystem` to expand the use and applicability of DaDRA.
+- As of now, there only exists in DaDRA scenario reachability with p-norm balls. Other methods, including non-scenario approach methods such as Christoffel functions, will be implemented in the near future.
+- To take full advantage of Python's ``multiprocessing.pool`` objects, the :class:`dadra.DynamicSystem` currently makes use of the ``global`` keyword upon the instantiation of an inner function within the :meth:`dadra.DynamicSystem.get_system` method. This allows pooling to be used for parallelization, but prevents multiple instances of :class:`dadra.DynamicSystem` to draw samples in a non-sequential order, though this is only a problem if each instance is instantiated using the class method :meth:`dadra.DynamicSystem.get_system`, rather than the default constructor for the :class:`dadra.DynamicSystem` class.
