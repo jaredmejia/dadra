@@ -1,9 +1,8 @@
 import numpy as np
 
 from collections.abc import Callable
-from functools import partial
 from inspect import signature, Parameter
-from numpy.random import default_rng, uniform
+from numpy.random import default_rng
 from sampling import make_sample_n
 from scipy.integrate import odeint
 

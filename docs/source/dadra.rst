@@ -1,4 +1,4 @@
-dadra package
+DaDRA package
 =============
 
 dadra.graph\_utils module

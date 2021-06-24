@@ -1,8 +1,24 @@
 import cvxpy as cp
 import numpy as np
+import time
 
 from functools import partial
 from scipy.optimize import minimize_scalar
+
+
+def format_time(t):
+    """Formats time into string with minutes and seconds
+
+    :param t: The time in seconds
+    :type t: float
+    :return: Formatted string with minutes and seconds
+    :rtype: string
+    """
+    time_string = time.strftime("%M:%S", time.gmtime(t))
+    time_list = time_string.split(":")
+    num_min = time_list[0]
+    num_sec = time_list[1]
+    return f"{num_min} minutes and {num_sec} seconds"
 
 
 def solve_p_norm(sample, n_x=3, p=2, const=None):
@@ -153,10 +169,10 @@ def compute_contour_2D(sample, A_val, b_val, cont_axis=2, n_x=3, p=2, grid_n=200
         x_min - 0.4 * (x_max - x_min), x_max + 0.4 * (x_max - x_min), grid_n
     )
     y = np.linspace(
-        y_min - 0.2 * (y_max - y_min), y_max + 0.4 * (y_max - y_min), grid_n
+        y_min - 0.4 * (y_max - y_min), y_max + 0.4 * (y_max - y_min), grid_n
     )
     z = np.linspace(
-        x_min - 0.2 * (z_max - z_min), z_max + 0.4 * (z_max - z_min), grid_n
+        x_min - 0.4 * (z_max - z_min), z_max + 0.4 * (z_max - z_min), grid_n
     )
 
     if cont_axis == 2:
@@ -215,10 +231,10 @@ def compute_contour_3D(sample, A_val, b_val, cont_axis=2, n_x=3, p=2, grid_n=200
         x_min - 0.4 * (x_max - x_min), x_max + 0.4 * (x_max - x_min), grid_n
     )
     y = np.linspace(
-        y_min - 0.2 * (y_max - y_min), y_max + 0.4 * (y_max - y_min), grid_n
+        y_min - 0.4 * (y_max - y_min), y_max + 0.4 * (y_max - y_min), grid_n
     )
     z = np.linspace(
-        x_min - 0.2 * (z_max - z_min), z_max + 0.4 * (z_max - z_min), grid_n
+        x_min - 0.4 * (z_max - z_min), z_max + 0.4 * (z_max - z_min), grid_n
     )
 
     if cont_axis == 2:
