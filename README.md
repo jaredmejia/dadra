@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/pypi/l/dadra.svg)](https://github.com/dadra/blob/master/LICENSE)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-# What is it?
+## What is it?
 **DaDRA** (day-druh) is a Python library for Data-Driven Reachability Analysis. The main goal of the package is to accelerate the process of computing estimates of forward reachable sets for nonlinear dynamical systems.
 
 ## Installation
@@ -22,6 +22,19 @@ $ pip install --upgrade dadra
 
 ## Usage
 See this [Lorenz System Example](https://dadra.readthedocs.io/en/latest/examples.html#lorenz-system-example) in the [documentation](https://dadra.readthedocs.io/en/latest/).
+
+## Contributing
+For contributions, please follow the workflow:
+  1. **Fork** the repo on GitHub
+  2. **Clone** the project to your own machine
+  3. **Commit** changes to your own branch
+  4. **Push** your work back up to your fork
+  5. Submit a **Pull request** so that your changes can be reviewed
+
+Be sure to fetch and merge from upstream before making a pull request.
+
+## Acknowledgement
+Special thanks to [@alexdevonport](https://github.com/alexdevonport) for contributions.
 
 ## License
 [MIT License](https://github.com/JaredMejia/dadra/blob/main/LICENSE)
