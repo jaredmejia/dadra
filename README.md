@@ -6,7 +6,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 
-<img src="imgs/l_3D_cont.gif" class="center">
+<img src="imgs/l_3D_cont.gif" style="center" width="500" height="500">
 
 
 ## What is it?
@@ -58,6 +58,6 @@ Special thanks to [@alexdevonport](https://github.com/alexdevonport) for contrib
   display: block;
   margin-left: auto;
   margin-right: auto;
-  width: 70%;
+  width: 50%;
 }
 </style>
