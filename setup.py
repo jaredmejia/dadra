@@ -11,7 +11,7 @@ setup(
     name="dadra",
     packages=setuptools.find_packages(),
     license="MIT",
-    version="0.0.3",
+    version="0.0.4",
     description="Library for Data-Driven Reachability Analysis",
     long_description=long_description,
     long_description_content_type="text/markdown",
