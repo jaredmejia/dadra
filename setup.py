@@ -10,4 +10,9 @@ setup(
     url="https://github.com/JaredMejia/dadra",
     license="MIT",
     install_requires=["cvxpy", "matplotlib", "numpy", "scipy"],
+    classifiers=(
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ),  
 )
