@@ -6,7 +6,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 
-<img src="imgs/l_3D_cont.gif" align="center" widht="200px">
+<img src="imgs/l_3D_cont.gif" class="center">
 
 
 ## What is it?
@@ -53,3 +53,11 @@ Special thanks to [@alexdevonport](https://github.com/alexdevonport) for contrib
   year={2021}
 }
 ```
+<style>
+.center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: 70%;
+}
+</style>
