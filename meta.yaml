@@ -1,0 +1,31 @@
+package:
+  name: dadra
+  version: 0.0.6
+
+source:
+  git_url: https://github.com/JaredMejia/dadra
+
+requirements:
+  build:
+    - cvxpy     1.1.13
+    - matplotlib     3.3.4
+    - numpy     1.20.2
+    - python    3.8.3
+    - scipy     1.6.3
+  run:
+    - cvxpy     1.1.13
+    - matplotlib     3.3.4
+    - numpy     1.20.2
+    - python    3.8.3
+    - scipy     1.6.3
+
+test:
+  imports:
+    - dadra
+
+about:
+  home: https://github.com/JaredMejia/dadra
+  license: MIT
+  license_familY: MIT
+  license_file: LICENSE
+  summary: "Library for Data-Driven Reachability Analysis"
