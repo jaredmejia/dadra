@@ -1,8 +1,10 @@
 # DaDRA
-Python Library for Data-Driven Reachability Analysis.
-
-
+[![Documentation Status](https://readthedocs.org/projects/dadra/badge/?version=latest)](https://dadra.readthedocs.io/en/latest/?badge=latest)
 [![PyPI Latest Release](https://img.shields.io/pypi/v/dadra.svg)](https://pypi.org/project/dadra/)
+[![License](https://img.shields.io/pypi/l/dadra.svg)](https://github.com/dadra/blob/master/LICENSE)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+Python Library for Data-Driven Reachability Analysis.
 
 ## Installation
 To install the current release of `dadra`:
