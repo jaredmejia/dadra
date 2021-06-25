@@ -4,9 +4,9 @@ import time
 import warnings
 
 from dadra.dyn_sys import DynamicSystem
-from graph_utils import plot_contour_2D, plot_contour_3D, plot_sample
-from sampling import num_samples
-from utils import (
+from dadra.graph_utils import plot_contour_2D, plot_contour_3D, plot_sample
+from dadra.sampling import num_samples
+from dadra.utils import (
     compute_contour_2D,
     compute_contour_3D,
     empirical_estimate,
