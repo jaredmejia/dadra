@@ -3,7 +3,7 @@ import numpy as np
 import time
 import warnings
 
-from dyn_sys import DynamicSystem
+from dadra.dyn_sys import DynamicSystem
 from graph_utils import plot_contour_2D, plot_contour_3D, plot_sample
 from sampling import num_samples
 from utils import (
