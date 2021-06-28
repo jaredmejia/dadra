@@ -1,16 +1,24 @@
+from matplotlib.pyplot import grid
+from dadra.systems.samplers import sample_lorenz
 from functools import partial
 import numpy as np
 import time
 import warnings
 
 from dadra.dyn_sys import DynamicSystem
-from dadra.graph_utils import plot_contour_2D, plot_contour_3D, plot_sample
+from dadra.utils.graph_utils import plot_contour_2D, plot_contour_3D, plot_sample
 from dadra.sampling import num_samples
-from dadra.utils import (
-    compute_contour_2D,
-    compute_contour_3D,
-    empirical_estimate,
-    format_time,
+from dadra.utils.christoffel_utils import (
+    c_compute_contours,
+    c_emp_estimate,
+    construct_inv_christoffel,
+    construct_kernelized_inv_christoffel,
+)
+from dadra.utils.misc_utils import format_time
+from dadra.utils.p_utils import (
+    p_compute_contour_2D,
+    p_compute_contour_3D,
+    p_emp_estimate,
     solve_p_norm,
 )
 
@@ -24,12 +32,24 @@ class Estimator:
     :type epsilon: float, optional
     :param delta: The confidence parameter, defaults to 1e-9
     :type delta: float, optional
+    :param christoffel: If True, uses Christoffel functions to estimate the reachable set. If False, the p-norm method is used, defaults to False
+    :type christoffel: bool, optional
     :param p: The order of p-norm, defaults to 2
     :type p: int, optional
     :param const: The constraints placed on the parameters A and b, defaults to None
     :type const: string, optional
     :param normalize: If true, the sample is normalized, defaults to True
     :type normalize: bool, optional
+    :param d: The degree of polynomial features points are mapped to, defaults to 10
+    :type d: int, optional
+    :param kernelized: If True, the kernelized inverse christoffel function is constructed, defaults to False
+    :type kernelized: bool, optional
+    :param rho: Inverse Christoffel function constant rho, defaults to 0.0001
+    :type rho: float, optional
+    :param rbf: If True, a radical basis function kernel is used, defaults to False
+    :type rbf: bool, optional
+    :param scale: The length scale of the kernel, defaults to 1.0
+    :type scale: float, optional
     """
 
     def __init__(
@@ -37,9 +57,15 @@ class Estimator:
         dyn_sys: DynamicSystem,
         epsilon=0.05,
         delta=1e-9,
+        christoffel=False,
         p=2,
         const=None,
         normalize=True,
+        d=10,
+        kernelized=False,
+        rho=0.0001,
+        rbf=False,
+        scale=1.0,
     ):
 
         self.dyn_sys = dyn_sys
@@ -47,13 +73,27 @@ class Estimator:
 
         self.epsilon = epsilon
         self.delta = delta
-        self.p = p
-        self.const = const
+        self.christoffel = christoffel
+
+        if not christoffel:
+            self.p = p
+            self.const = const
+        else:
+            self.const = const
+            self.d = d
+            self.kernelized = kernelized
+            self.rho = rho
+            self.rbf = rbf
+            self.scale = scale
+
         self.normalize = normalize
         self.num_samples = self.get_num_samples()
         self.samples = self.get_sample()
 
-        self.A, self.b, self.status = self.solve_p()
+        if not christoffel:
+            self.A, self.b, self.status = self.solve_p()
+        else:
+            self.C, self.level = self.construct_christoffel()
 
     @classmethod
     def estimator_from_func(
@@ -65,9 +105,15 @@ class Estimator:
         parts=1001,
         epsilon=0.05,
         delta=1e-9,
+        christoffel=False,
         p=2,
         const=None,
         normalize=True,
+        d=10,
+        kernelized=False,
+        rho=0.0001,
+        rbf=False,
+        scale=0.5,
     ):
         """Class method that allows for an instance of :class:`dadra.Estimator` to be initialized
         using a dynamic function, and the components for an instance of :class:`DynamicSystem`
@@ -87,17 +133,42 @@ class Estimator:
         :type epsilon: float, optional
         :param delta: The confidence parameter, defaults to 1e-9
         :type delta: float, optional
+        :param christoffel: If True, uses Christoffel functions to estimate the reachable set. If False, the p-norm method is used, defaults to False
+        :type christoffel: bool, optional
         :param p: The order of p-norm, defaults to 2
         :type p: int, optional
         :param const: The constraints placed on the parameters A and b, defaults to None
         :type const: string, optional
         :param normalize: If true, the sample is normalized, defaults to True
         :type normalize: bool, optional
+        :param d: The degree of polynomial features points are mapped to, defaults to 10
+        :type d: int, optional
+        :param kernelized: If True, the kernelized inverse christoffel function is constructed, defaults to False
+        :type kernelized: bool, optional
+        :param rho: Inverse Christoffel function constant rho, defaults to 0.0001
+        :type rho: float, optional
+        :param rbf: If True, a radical basis function kernel is used, defaults to False
+        :type rbf: bool, optional
+        :param scale: The length scale of the kernel, defaults to 1.0
+        :type scale: float, optional
         :return: A :class:`dadra.Estimator` object
         :rtype: :class:`dadra.Estimator`
         """
         dyn_sys = DynamicSystem(dyn_func, intervals, state_dim, timesteps, parts)
-        return cls(dyn_sys, epsilon, delta, p, const, normalize)
+        return cls(
+            dyn_sys,
+            epsilon=epsilon,
+            delta=delta,
+            christoffel=christoffel,
+            p=p,
+            const=const,
+            normalize=normalize,
+            d=d,
+            kernelized=kernelized,
+            rho=rho,
+            rbf=rbf,
+            scale=scale,
+        )
 
     @classmethod
     def estimator_from_list(
@@ -108,9 +179,15 @@ class Estimator:
         parts=1001,
         epsilon=0.05,
         delta=1e-9,
+        christoffel=False,
         p=2,
         const=None,
         normalize=True,
+        d=10,
+        kernelized=False,
+        rho=0.0001,
+        rbf=False,
+        scale=0.5,
     ):
         """Class method that allows for an instance of :class:`dadra.Estimator` to be initialized
         using a list of dynamic functions, and the components for an instance of :class:`DynamicSystem`
@@ -128,17 +205,42 @@ class Estimator:
         :type epsilon: float, optional
         :param delta: The confidence parameter, defaults to 1e-9
         :type delta: float, optional
+        :param christoffel: If True, uses Christoffel functions to estimate the reachable set. If False, the p-norm method is used, defaults to False
+        :type christoffel: bool, optional
         :param p: The order of p-norm, defaults to 2
         :type p: int, optional
         :param const: The constraints placed on the parameters A and b, defaults to None
         :type const: string, optional
         :param normalize: If true, the sample is normalized, defaults to True
         :type normalize: bool, optional
+        :param d: The degree of polynomial features points are mapped to, defaults to 10
+        :type d: int, optional
+        :param kernelized: If True, the kernelized inverse christoffel function is constructed, defaults to False
+        :type kernelized: bool, optional
+        :param rho: Inverse Christoffel function constant rho, defaults to 0.0001
+        :type rho: float, optional
+        :param rbf: If True, a radical basis function kernel is used, defaults to False
+        :type rbf: bool, optional
+        :param scale: The length scale of the kernel, defaults to 1.0
+        :type scale: float, optional
         :return: A :class:`dadra.Estimator` object
         :rtype: :class:`dadra.Estimator`
         """
         dyn_sys = DynamicSystem.get_system(func_list, intervals, timesteps, parts)
-        return cls(dyn_sys, epsilon, delta, p, const, normalize)
+        return cls(
+            dyn_sys,
+            epsilon=epsilon,
+            delta=delta,
+            christoffel=christoffel,
+            p=p,
+            const=const,
+            normalize=normalize,
+            d=d,
+            kernelized=kernelized,
+            rho=rho,
+            rbf=rbf,
+            scale=scale,
+        )
 
     def check_sys(self):
         """Checks whether the dynamic system passed to the constructor is valid
@@ -148,6 +250,7 @@ class Estimator:
         if not isinstance(self.dyn_sys, DynamicSystem):
             raise TypeError("Object of type DynamicSystem must be passed")
 
+    # TODO: Define num_samples function specifically for christoffel function estimate
     def get_num_samples(self):
         """Compute the number of samples needed to satisfy the specified probabilistic guarantees
 
@@ -196,13 +299,30 @@ class Estimator:
             )
         return A, b, status
 
+    def construct_christoffel(self):
+        if self.kernelized:
+            C = construct_kernelized_inv_christoffel(
+                self.samples, self.d, rho=self.rho, rbf=self.rbf, scale=self.scale
+            )
+        else:
+            C = construct_inv_christoffel(self.samples, self.d)
+
+        start_lvl_param = time.perf_counter()
+        values = C(self.samples)
+        level = np.max(values)
+        end_lvl_param = time.perf_counter()
+        print(
+            f"Time to compute level parameter: {format_time(end_lvl_param - start_lvl_param)}"
+        )
+        return C, level
+
     def empirical_estimate(self, num_samples_emp=None):
         """Computes the ratio of samples within the estimated reachable set
 
         :param num_samples_emp: The number of samples to draw for the empirical estimate, defaults to the number of samples drawn to obtain the p-norm ball
         :type num_samples_emp: int, optional
         """
-        if self.status != "optimal":
+        if not self.christoffel and self.status != "optimal":
             warnings.warn(
                 "Non-optimal solution to p-norm ball. Empirical estimate may be innaccurate"
             )
@@ -224,10 +344,14 @@ class Estimator:
                 samples_emp
             )
 
-        ratio = empirical_estimate(
-            samples_emp, self.A, self.b, self.dyn_sys.state_dim, self.p
-        )
-        print(f"Ratio of samples within the estimated reachability set: {ratio}")
+        if not self.christoffel:
+            ratio = p_emp_estimate(
+                samples_emp, self.A, self.b, self.dyn_sys.state_dim, self.p
+            )
+        else:
+            ratio = c_emp_estimate(self.samples, self.C, self.level)
+
+        print(f"Ratio of samples within the estimated reachable set: {ratio}")
 
     def summary(self):
         """Prints a summary of the attributes of this instance of :class:`Estimator`"""
@@ -241,10 +365,19 @@ class Estimator:
         summary_str += f"State dimension: {self.dyn_sys.state_dim}" + "\n"
         summary_str += f"Accuracy parameter epsilon: {self.epsilon}" + "\n"
         summary_str += f"Confidence parameter delta: {self.delta}" + "\n"
-        summary_str += f"p-norm p value: {self.p}" + "\n"
-        summary_str += f"Constraints on p-norm ball: {self.const}" + "\n"
         summary_str += f"Number of samples: {self.num_samples}" + "\n"
-        summary_str += f"Status of p-norm ball solution: {self.status}" + "\n"
+        if not self.christoffel:
+            summary_str += f"Method of estimation: p-Norm Ball"
+            summary_str += f"p-norm p value: {self.p}" + "\n"
+            summary_str += f"Constraints on p-norm ball: {self.const}" + "\n"
+            summary_str += f"Status of p-norm ball solution: {self.status}" + "\n"
+        else:
+            summary_str += f"Method of estimation: Inverse Christoffel Function"
+            summary_str += f"Degree of polynomial features: {self.d}" + "\n"
+            summary_str += f"Kernelized: {self.kernelized}" + "\n"
+            summary_str += f"Constant rho: {self.rho}" + "\n"
+            summary_str += f"Radical basis function kernel: {self.rbf}" + "\n"
+            summary_str += f"Length scale of kernel: {self.scale}" + "\n"
         summary_str += (
             "----------------------------------------------------------------" + "\n"
         )
@@ -266,40 +399,51 @@ class Estimator:
         :param grid_n: The side length of the cube of points to be used for computing contours, defaults to 200
         :type grid_n: int
         """
-        cont_compute = partial(
-            compute_contour_2D,
-            sample=self.samples,
-            A_val=self.A,
-            b_val=self.b,
-            n_x=self.dyn_sys.state_dim,
-            p=self.p,
-            grid_n=grid_n,
-        )
+        if not self.christoffel:
+            cont_compute = partial(
+                p_compute_contour_2D,
+                sample=self.samples,
+                A_val=self.A,
+                b_val=self.b,
+                n_x=self.dyn_sys.state_dim,
+                p=self.p,
+                grid_n=grid_n,
+            )
 
-        print("Computing 2D contours")
-        cont_start = time.perf_counter()
-        xv1, yv1, z_cont, z_min, z_max = cont_compute(cont_axis=2)
-        xv2, zv1, y_cont, y_min, y_max = cont_compute(cont_axis=1)
-        yv2, zv2, x_cont, x_min, x_max = cont_compute(cont_axis=0)
-        cont_end = time.perf_counter()
-        print(f"Time to compute 2D contours: {format_time(cont_end - cont_start)}")
+            print("Computing 2D contours")
+            cont_start = time.perf_counter()
+            xv1, yv1, z_cont, z_min, z_max = cont_compute(cont_axis=2)
+            xv2, zv1, y_cont, y_min, y_max = cont_compute(cont_axis=1)
+            yv2, zv2, x_cont, x_min, x_max = cont_compute(cont_axis=0)
+            cont_end = time.perf_counter()
+            print(f"Time to compute 2D contours: {format_time(cont_end - cont_start)}")
 
-        plot_contour_2D(
-            xv1,
-            yv1,
-            z_cont,
-            z_max,
-            self.samples,
-            fig_name,
-            xv2=xv2,
-            zv1=zv1,
-            y_cont=y_cont,
-            y_level=y_max,
-            yv2=yv2,
-            zv2=zv2,
-            x_cont=x_cont,
-            x_level=x_max,
-        )
+            plot_contour_2D(
+                xv1,
+                yv1,
+                z_cont,
+                z_max,
+                self.samples,
+                fig_name,
+                xv2=xv2,
+                zv1=zv1,
+                y_cont=y_cont,
+                y_level=y_max,
+                yv2=yv2,
+                zv2=zv2,
+                x_cont=x_cont,
+                x_level=x_max,
+            )
+
+        else:
+            start_comp_cont = time.perf_counter()
+            xv, yv, cont = c_compute_contours(self.C, self.samples, grid_n)
+            end_comp_cont = time.perf_counter()
+            print(
+                f"Time to compute contour: {format_time(end_comp_cont - start_comp_cont)}"
+            )
+
+            plot_contour_2D(xv, yv, cont, self.level, self.samples, fig_name)
 
     def plot_3D_cont(self, fig_name, grid_n=100, gif_name=None):
         """Computes and plots the contours in 3D with the option for saving an animated gif of the rotating graph
@@ -313,7 +457,7 @@ class Estimator:
         """
         print("Computing 3D contour")
         cont_start = time.perf_counter()
-        d0, d1, cont_min, cont_max, c_min, c_max = compute_contour_3D(
+        d0, d1, cont_min, cont_max, c_min, c_max = p_compute_contour_3D(
             self.samples, self.A, self.b, grid_n=grid_n
         )
         cont_end = time.perf_counter()
