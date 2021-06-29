@@ -1,8 +1,33 @@
 import cvxpy as cp
+import math
 import numpy as np
 
 from functools import partial
 from scipy.optimize import minimize_scalar
+
+
+def p_num_samples(epsilon, delta, n_x=3, const=None):
+    """Compute the number of samples needed to satisfy the specified probabilistic guarantees for the p-norm ball reachable set estimate
+
+    :param epsilon: The accuracy parameter
+    :type epsilon: float
+    :param delta: The confidence parameter
+    :type delta: float
+    :param n_x: The state dimension, defaults to 3
+    :type n_x: int
+    :param const: The constraints placed on the parameters A and b, defaults to None
+    :type const: string, optional
+    :return: The number of samples needed to satisfy the specified probabilistic guarantees
+    :rtype: int
+    """
+    if const is None:
+        n_theta = 0.5 * (n_x ** 2 + 3 * n_x)
+    elif const == "diagonal":
+        n_theta = 2 * n_x
+    elif const == "scalar":
+        n_theta = 1
+    N = math.ceil(math.e * (math.log(1 / delta) + n_theta) / (epsilon * (math.e - 1)))
+    return N
 
 
 def solve_p_norm(sample, n_x=3, p=2, const=None):

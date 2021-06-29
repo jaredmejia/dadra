@@ -1,5 +1,14 @@
-DaDRA package
+dadra package
 =============
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   dadra.systems
+   dadra.utils
 
 
 dadra.dyn\_sys module
@@ -18,26 +27,10 @@ dadra.estimate module
    :undoc-members:
    :show-inheritance:
 
-dadra.graph\_utils module
--------------------------
-
-.. automodule:: dadra.graph_utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 dadra.sampling module
 ---------------------
 
 .. automodule:: dadra.sampling
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-dadra.utils module
-------------------
-
-.. automodule:: dadra.utils
    :members:
    :undoc-members:
    :show-inheritance:

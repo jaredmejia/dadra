@@ -1,9 +1,30 @@
+import math
 import numpy as np
 import time
 
 from dadra.utils.misc_utils import format_time, normalize, normalize0
 from sklearn.gaussian_process.kernels import RBF
 from sklearn.preprocessing import PolynomialFeatures
+
+
+def c_num_samples(epsilon, delta, n_x=2, k=10):
+    """Compute the number of samples needed to satisfy the specified probabilistic guarantees for the inverse Christoffel function reachable set estimate
+
+    :param epsilon: The accuracy parameter
+    :type epsilon: float
+    :param delta: The confidence parameter
+    :type delta: float
+    :param n_x: The state dimension, defaults to 2
+    :type n_x: int
+    :param k: degree of polynomial features points are mapped to
+    :type k: int
+    :return: The number of samples needed to satisfy the specified probabilistic guarantees
+    :rtype: int
+    """
+    return math.ceil(
+        (5 / epsilon)
+        * (math.log(4 / delta) + math.comb(n_x + 2 * k, n_x) * math.log(40 / epsilon))
+    )
 
 
 def construct_inv_christoffel(data, d):

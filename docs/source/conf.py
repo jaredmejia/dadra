@@ -14,6 +14,9 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath("../../dadra/"))
+sys.path.insert(0, os.path.abspath("../../dadra/systems/"))
+sys.path.insert(0, os.path.abspath("../../dadra/utils/"))
+print(sys.executable)
 
 
 # -- Project information -----------------------------------------------------

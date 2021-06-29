@@ -1,5 +1,3 @@
-from matplotlib.pyplot import grid
-from dadra.systems.samplers import sample_lorenz
 from functools import partial
 import numpy as np
 import time
@@ -7,10 +5,10 @@ import warnings
 
 from dadra.dyn_sys import DynamicSystem
 from dadra.utils.graph_utils import plot_contour_2D, plot_contour_3D, plot_sample
-from dadra.sampling import num_samples
 from dadra.utils.christoffel_utils import (
     c_compute_contours,
     c_emp_estimate,
+    c_num_samples,
     construct_inv_christoffel,
     construct_kernelized_inv_christoffel,
 )
@@ -19,6 +17,7 @@ from dadra.utils.p_utils import (
     p_compute_contour_2D,
     p_compute_contour_3D,
     p_emp_estimate,
+    p_num_samples,
     solve_p_norm,
 )
 
@@ -258,7 +257,10 @@ class Estimator:
         :rtype: int
         """
         n_x = self.dyn_sys.state_dim
-        return num_samples(self.epsilon, self.delta, n_x, self.const)
+        if not self.christoffel:
+            return c_num_samples(self.epsilon, self.delta, n_x, self.const)
+        else:
+            return p_num_samples(self.epsilon, self.delta, n_x, self.d)
 
     def get_sample(self):
         """Draws the number of samples necessary to satisfy the specified probabilistic guarantees
@@ -372,7 +374,7 @@ class Estimator:
             summary_str += f"Constraints on p-norm ball: {self.const}" + "\n"
             summary_str += f"Status of p-norm ball solution: {self.status}" + "\n"
         else:
-            summary_str += f"Method of estimation: Inverse Christoffel Function"
+            summary_str += f"Method of estimation: Inverse Christoffel Function" + "\n"
             summary_str += f"Degree of polynomial features: {self.d}" + "\n"
             summary_str += f"Kernelized: {self.kernelized}" + "\n"
             summary_str += f"Constant rho: {self.rho}" + "\n"
