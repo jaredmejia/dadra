@@ -10,6 +10,13 @@ Subpackages
    dadra.systems
    dadra.utils
 
+dadra.disturbance module
+------------------------
+
+.. automodule:: dadra.disturbance
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 dadra.dyn\_sys module
 ---------------------
@@ -34,4 +41,3 @@ dadra.sampling module
    :members:
    :undoc-members:
    :show-inheritance:
-

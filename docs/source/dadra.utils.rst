@@ -1,7 +1,6 @@
 dadra.utils package
 ===================
 
-
 dadra.utils.christoffel\_utils module
 -------------------------------------
 

@@ -1,7 +1,6 @@
 dadra.systems package
 =====================
 
-
 dadra.systems.dynamics module
 -----------------------------
 
