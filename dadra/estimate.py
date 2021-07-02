@@ -87,12 +87,16 @@ class Estimator:
 
         self.normalize = normalize
         self.num_samples = self.get_num_samples()
-        self.samples = self.get_sample()
+
+        self.samples = None
 
         if not christoffel:
-            self.A, self.b, self.status = self.solve_p()
+            self.A = None
+            self.b = None
+            self.status = None
         else:
-            self.C, self.level = self.construct_christoffel()
+            self.C = None
+            self.level = None
 
     @classmethod
     def estimator_from_func(
@@ -249,7 +253,6 @@ class Estimator:
         if not isinstance(self.dyn_sys, System):
             raise TypeError("Object of type System must be passed")
 
-    # TODO: Define num_samples function specifically for christoffel function estimate
     def get_num_samples(self):
         """Compute the number of samples needed to satisfy the specified probabilistic guarantees
 
@@ -280,6 +283,15 @@ class Estimator:
         if self.normalize:
             samples = (samples - np.mean(samples, axis=0)) / np.std(samples)
         return samples
+
+    def estimate(self):
+        """Draws the samples and makes an estimate of the reachable set"""
+        self.samples = self.get_sample()
+
+        if not self.christoffel:
+            self.A, self.b, self.status = self.solve_p()
+        else:
+            self.C, self.level = self.construct_christoffel()
 
     def solve_p(self):
         """Solves for the optimal p-norm ball that estimates the reachable set
@@ -372,7 +384,13 @@ class Estimator:
             summary_str += f"Method of estimation: p-Norm Ball"
             summary_str += f"p-norm p value: {self.p}" + "\n"
             summary_str += f"Constraints on p-norm ball: {self.const}" + "\n"
-            summary_str += f"Status of p-norm ball solution: {self.status}" + "\n"
+            if all([self.A is None, self.b is None, self.status is None]):
+                summary_str += (
+                    f"Status of p-norm ball solution: No estimate has been made yet"
+                    + "\n"
+                )
+            else:
+                summary_str += f"Status of p-norm ball solution: {self.status}" + "\n"
         else:
             summary_str += f"Method of estimation: Inverse Christoffel Function" + "\n"
             summary_str += f"Degree of polynomial features: {self.d}" + "\n"
@@ -380,6 +398,16 @@ class Estimator:
             summary_str += f"Constant rho: {self.rho}" + "\n"
             summary_str += f"Radical basis function kernel: {self.rbf}" + "\n"
             summary_str += f"Length scale of kernel: {self.scale}" + "\n"
+            if all([self.C is None, self.level is None]):
+                summary_str += (
+                    f"Status of Christoffel Function estimate: No estimate has been made yet"
+                    + "\n"
+                )
+            else:
+                summary_str += (
+                    f"Status of Christoffel Function estimate: Estimate made" + "\n"
+                )
+
         summary_str += (
             "----------------------------------------------------------------" + "\n"
         )
