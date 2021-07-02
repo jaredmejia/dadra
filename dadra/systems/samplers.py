@@ -1,14 +1,21 @@
 import numpy as np
 
+from dadra.disturbance import Disturbance
 from dadra.sampling import make_sample_n
 from dadra.systems.dynamics import *
 from numpy.random import default_rng
 from scipy.integrate import odeint
 
 
-def sample_oscillator(timesteps=100, parts=1001):
+def sample_oscillator(
+    x=None, disturbance: Disturbance = None, timesteps=100, parts=1001
+):
     """Obtains a sample from a Duffing Oscillator over the specified number of timesteps
 
+    :param x: Placeholder variable over which to evaluate, defaults to None
+    :type x: NoneType, optional
+    :param disturbance: The disturbance to be added to each dimension, defaults to None
+    :type disturbance: :class:`dadra.Disturbance`, optional
     :param timesteps: The number of timesteps over which to compute the sample, defaults to 100
     :type timesteps: int, optional
     :param parts: The number of parts to partition the time interval into for computing the sample, defaults to 1001
@@ -18,13 +25,21 @@ def sample_oscillator(timesteps=100, parts=1001):
     """
     t = np.linspace(0, timesteps, parts)
     y0 = np.array([np.random.uniform(0.95, 1.05), np.random.uniform(-0.05, 0.05)])
-    sol = odeint(duffing_oscillator, y0, t)
+    if disturbance is None:
+        sol = odeint(duffing_oscillator, y0, t)
+    else:
+        disturbance.draw_alphas()
+        sol = odeint(duffing_oscillator, y0, t, args=tuple([disturbance]))
     return sol[-1]
 
 
-def sample_lorenz(timesteps=100, parts=1001):
+def sample_lorenz(x=None, disturbance: Disturbance = None, timesteps=100, parts=1001):
     """Obtains a sample from a Lorenz system over the specified number of timesteps
 
+    :param x: Placeholder variable over which to evaluate, defaults to None
+    :type x: NoneType, optional
+    :param disturbance: The disturbance to be added to each dimension, defaults to None
+    :type disturbance: :class:`dadra.Disturbance`, optional
     :param timesteps: The number of timesteps over which to compute the sample, defaults to 100
     :type timesteps: int, optional
     :param parts: The number of parts to partition the time interval into for computing the sample, defaults to 1001
@@ -35,13 +50,19 @@ def sample_lorenz(timesteps=100, parts=1001):
     t = np.linspace(0, timesteps, parts)
     ru = default_rng().uniform
     z0 = np.array([ru(0, 1), ru(0, 1), ru(0, 1)])
-    sol = odeint(lorenz_system, z0, t)
+    if disturbance is None:
+        sol = odeint(lorenz_system, z0, t)
+    else:
+        disturbance.draw_alphas()
+        sol = odeint(lorenz_system, z0, t, args=tuple([disturbance]))
     return sol[-1]
 
 
-def sample_quadrotor(timesteps=5, parts=5001):
+def sample_quadrotor(x=None, timesteps=5, parts=5001):
     """Obtains a sample from a Planar Quadrotor Model over the specified number of timesteps
 
+    :param x: Placeholder variable over which to evaluate, defaults to None
+    :type x: NoneType, optional
     :param timesteps: The number of timesteps over which to compute the sample, defaults to 5
     :type timesteps: int, optional
     :param parts: The number of parts to partition the time interval into for computing the sample, defaults to 5001
@@ -74,9 +95,11 @@ def sample_quadrotor(timesteps=5, parts=5001):
     return sol[-1]
 
 
-def sample_traffic(nx=6, timesteps=100, parts=10001):
+def sample_traffic(x=None, nx=6, timesteps=100, parts=10001):
     """Obtains a sample from a Monotone Traffic Model over the specified number of timesteps
 
+    :param x: Placeholder variable over which to evaluate, defaults to None
+    :type x: NoneType, optional
     :param nx: The state dimension of the model, defaults to 6
     :type nx: int, optional
     :param timesteps: The number of timesteps over which to compute the sample, defaults to 100

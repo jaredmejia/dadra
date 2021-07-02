@@ -1,6 +1,7 @@
 import numpy as np
 
 from multiprocessing import Pool, cpu_count
+from tqdm.auto import tqdm, trange
 
 
 def make_sample_n(sample_fn, parallel=True, pool=None):
@@ -30,8 +31,8 @@ def make_sample_n(sample_fn, parallel=True, pool=None):
                 p = Pool(cpu_count())
             else:
                 p = pool
-            return np.array(p.map(sample_fn, np.arange(n)))
+            return np.array([s for s in tqdm(p.imap(sample_fn, np.arange(n)), total=n)])
         else:
-            return np.array([sample_fn() for i in range(n)])
+            return np.array([sample_fn() for i in trange(n)])
 
     return sample_n

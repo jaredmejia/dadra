@@ -90,29 +90,30 @@ def plot_contour_2D(
         axs.contour(xv1, yv1, z_cont, levels=[z_level], colors="b")
         axs.set_xlabel("x")
         axs.set_ylabel("y")
-        axs.set_title("contour in x-y plane")
+        axs.set_title("samples in x-y plane")
         plt.show()
+        plt.savefig(fig_name)
         return
 
     axs[0].plot(sample[:, 0], sample[:, 1], "k.")
     axs[0].contour(xv1, yv1, z_cont, levels=[z_level], colors="b")
     axs[0].set_xlabel("x")
     axs[0].set_ylabel("y")
-    axs[0].set_title("contour in x-y plane")
+    axs[0].set_title("samples in x-y plane")
 
     if y_cont is not None:
         axs[1].plot(sample[:, 0], sample[:, 2], "k.")
         axs[1].contour(xv2, zv1, y_cont, levels=[y_level], colors="b")
         axs[1].set_xlabel("x")
         axs[1].set_ylabel("z")
-        axs[1].set_title("contour in x-z plane")
+        axs[1].set_title("samples in x-z plane")
 
         if x_cont is not None:
             axs[2].plot(sample[:, 1], sample[:, 2], "k.")
             axs[2].contour(yv2, zv2, x_cont, levels=[x_level], colors="b")
             axs[2].set_xlabel("y")
             axs[2].set_ylabel("z")
-            axs[2].set_title("contour in y-z plane")
+            axs[2].set_title("samples in y-z plane")
 
     plt.savefig(fig_name)
 

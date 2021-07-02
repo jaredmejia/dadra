@@ -3,7 +3,7 @@ import numpy as np
 import time
 import warnings
 
-from dadra.dyn_sys import DynamicSystem
+from dadra.dyn_sys import SimpleSystem, System
 from dadra.utils.graph_utils import plot_contour_2D, plot_contour_3D, plot_sample
 from dadra.utils.christoffel_utils import (
     c_compute_contours,
@@ -25,8 +25,8 @@ from dadra.utils.p_utils import (
 class Estimator:
     """Class which allows for estimation of the reachable sets for a given dynamical system.
 
-    :param dyn_sys: An instance of :class:`dadra.DynamicSystem`
-    :type dyn_sys: DynamicSystem
+    :param dyn_sys: An instance of :class:`dadra.System`
+    :type dyn_sys: System
     :param epsilon: The accuracy parameter, defaults to 0.05
     :type epsilon: float, optional
     :param delta: The confidence parameter, defaults to 1e-9
@@ -53,7 +53,7 @@ class Estimator:
 
     def __init__(
         self,
-        dyn_sys: DynamicSystem,
+        dyn_sys: System,
         epsilon=0.05,
         delta=1e-9,
         christoffel=False,
@@ -115,8 +115,8 @@ class Estimator:
         scale=0.5,
     ):
         """Class method that allows for an instance of :class:`dadra.Estimator` to be initialized
-        using a dynamic function, and the components for an instance of :class:`DynamicSystem`
-        rather than explicitly passing in a :class:`DynamicSystem` object
+        using a dynamic function, and the components for an instance of :class:`SimpleSystem`
+        rather than explicitly passing in a :class:`System` object
 
         :param dyn_func: The function defining the dynamics of the system
         :type dyn_func: function
@@ -153,7 +153,7 @@ class Estimator:
         :return: A :class:`dadra.Estimator` object
         :rtype: :class:`dadra.Estimator`
         """
-        dyn_sys = DynamicSystem(dyn_func, intervals, state_dim, timesteps, parts)
+        dyn_sys = SimpleSystem(dyn_func, intervals, state_dim, timesteps, parts)
         return cls(
             dyn_sys,
             epsilon=epsilon,
@@ -189,8 +189,8 @@ class Estimator:
         scale=0.5,
     ):
         """Class method that allows for an instance of :class:`dadra.Estimator` to be initialized
-        using a list of dynamic functions, and the components for an instance of :class:`DynamicSystem`
-        rather than explicitly passing in a :class:`DynamicSystem` object
+        using a list of dynamic functions, and the components for an instance of :class:`SimpleSystem`
+        rather than explicitly passing in a :class:`System` object
 
         :param dyn_func: The list of functions, one for each variable, that define the dynamics of the system
         :type dyn_func: function
@@ -225,7 +225,7 @@ class Estimator:
         :return: A :class:`dadra.Estimator` object
         :rtype: :class:`dadra.Estimator`
         """
-        dyn_sys = DynamicSystem.get_system(func_list, intervals, timesteps, parts)
+        dyn_sys = SimpleSystem.get_system(func_list, intervals, timesteps, parts)
         return cls(
             dyn_sys,
             epsilon=epsilon,
@@ -244,10 +244,10 @@ class Estimator:
     def check_sys(self):
         """Checks whether the dynamic system passed to the constructor is valid
 
-        :raises TypeError: If an object of type other than :class:`dadra.DynamicSystem` is passed
+        :raises TypeError: If an object of type other than :class:`dadra.System` is passed
         """
-        if not isinstance(self.dyn_sys, DynamicSystem):
-            raise TypeError("Object of type DynamicSystem must be passed")
+        if not isinstance(self.dyn_sys, System):
+            raise TypeError("Object of type System must be passed")
 
     # TODO: Define num_samples function specifically for christoffel function estimate
     def get_num_samples(self):
@@ -258,9 +258,9 @@ class Estimator:
         """
         n_x = self.dyn_sys.state_dim
         if not self.christoffel:
-            return c_num_samples(self.epsilon, self.delta, n_x, self.const)
+            return p_num_samples(self.epsilon, self.delta, n_x, self.const)
         else:
-            return p_num_samples(self.epsilon, self.delta, n_x, self.d)
+            return c_num_samples(self.epsilon, self.delta, n_x, self.d)
 
     def get_sample(self):
         """Draws the number of samples necessary to satisfy the specified probabilistic guarantees
