@@ -370,18 +370,20 @@ class Estimator:
     def summary(self):
         """Prints a summary of the attributes of this instance of :class:`Estimator`"""
         summary_str = (
-            "----------------------------------------------------------------" + "\n"
+            "--------------------------------------------------------------------"
+            + "\n"
         )
         summary_str += "Estimator Summary" + "\n"
         summary_str += (
-            "================================================================" + "\n"
+            "===================================================================="
+            + "\n"
         )
         summary_str += f"State dimension: {self.dyn_sys.state_dim}" + "\n"
         summary_str += f"Accuracy parameter epsilon: {self.epsilon}" + "\n"
         summary_str += f"Confidence parameter delta: {self.delta}" + "\n"
         summary_str += f"Number of samples: {self.num_samples}" + "\n"
         if not self.christoffel:
-            summary_str += f"Method of estimation: p-Norm Ball"
+            summary_str += f"Method of estimation: p-Norm Ball" + "\n"
             summary_str += f"p-norm p value: {self.p}" + "\n"
             summary_str += f"Constraints on p-norm ball: {self.const}" + "\n"
             if all([self.A is None, self.b is None, self.status is None]):
@@ -404,12 +406,14 @@ class Estimator:
                     + "\n"
                 )
             else:
+                summary_str += f"Christoffel function level: {self.level}" + "\n"
                 summary_str += (
-                    f"Status of Christoffel Function estimate: Estimate made" + "\n"
+                    f"Status of Christoffel function estimate: Estimate made" + "\n"
                 )
 
         summary_str += (
-            "----------------------------------------------------------------" + "\n"
+            "--------------------------------------------------------------------"
+            + "\n"
         )
         print(summary_str)
 

@@ -12,7 +12,7 @@ requirements:
     - numpy     >=1.20.2
     - python    >=3.8.3
     - scikit-learn     >=0.24.2
-    - scipy     >=1.6.3
+    - scipy     >=1.6.3 
     - tqdm      >=4.61.1
   run:
     - cvxpy     >=1.1.13
@@ -30,6 +30,6 @@ test:
 about:
   home: https://github.com/JaredMejia/dadra
   license: MIT
-  license_familY: MIT
+  license_family: MIT
   license_file: LICENSE
   summary: "Library for Data-Driven Reachability Analysis"

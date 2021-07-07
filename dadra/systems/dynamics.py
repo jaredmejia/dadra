@@ -4,7 +4,7 @@ from dadra.disturbance import Disturbance
 
 
 def duffing_oscillator(
-    y, t, disturbance: Disturbance = None, epsilon=1.0, alpha=0.05, omega=1.3, gamma=0.4
+    y, t, disturbance: Disturbance = None, eta=1.0, alpha=0.05, omega=1.3, gamma=0.4
 ):
     """Defines the dynamics of a Duffing oscillator based on initial states
 
@@ -14,8 +14,8 @@ def duffing_oscillator(
     :type t: int
     :param disturbance: The disturbance to be added to each dimension, defaults to None
     :type disturbance: :class:`dadra.Disturbance`, optional
-    :param epsilon: The weight of the disturbance to be added to each dimension, defaults to 1.0
-    :type epsilon: float, optional
+    :param eta: The weight of the disturbance to be added to each dimension, defaults to 1.0
+    :type eta: float, optional
     :param alpha: Duffing oscillator constant alpha, defaults to 0.05
     :type alpha: float, optional
     :param omega: Duffing oscillator constant omega, defaults to 1.3
@@ -29,19 +29,19 @@ def duffing_oscillator(
         dydt = [y[1], -alpha * y[1] + y[0] - y[0] ** 3 + gamma * np.cos(omega * t)]
     else:
         dydt = [
-            y[1] + disturbance.get_dist(0, t) * epsilon,
+            y[1] + disturbance.get_dist(0, t) * eta,
             -alpha * y[1]
             + y[0]
             - y[0] ** 3
             + gamma * np.cos(omega * t)
-            + disturbance.get_dist(1, t) * epsilon,
+            + disturbance.get_dist(1, t) * eta,
         ]
 
     return dydt
 
 
 def lorenz_system(
-    z, t, disturbance: Disturbance = None, epsilon=1.0, sigma=10.0, rho=28.0, beta=8 / 3
+    z, t, disturbance: Disturbance = None, eta=1.0, sigma=10.0, rho=28.0, beta=8 / 3
 ):
     """Defines the dynamics of a Lorenz system based on initial states
 
@@ -51,7 +51,8 @@ def lorenz_system(
     :type t: int
     :param disturbance: The disturbance to be added to each dimension, defaults to None
     :type disturbance: :class:`dadra.Disturbance`, optional
-    :param epsilon: The weight of the disturbance to be added to each dimension, defaults to 1.0
+    :param eta: The weight of the disturbance to be added to each dimension, defaults to 1.0
+    :type eta: float, optional
     :param sigma: Lorenz system constant sigma, defaults to 10.
     :type sigma: float, optional
     :param rho: Lorenz system constant rho, defaults to 28.
@@ -69,9 +70,9 @@ def lorenz_system(
         ]
     else:
         dzdt = [
-            sigma * (z[1] - z[0]) + disturbance.get_dist(0, t) * epsilon,
-            z[0] * (rho - z[2]) - z[1] + disturbance.get_dist(1, t) * epsilon,
-            z[0] * z[1] - beta * z[2] + disturbance.get_dist(2, t) * epsilon,
+            sigma * (z[1] - z[0]) + disturbance.get_dist(0, t) * eta,
+            z[0] * (rho - z[2]) - z[1] + disturbance.get_dist(1, t) * eta,
+            z[0] * z[1] - beta * z[2] + disturbance.get_dist(2, t) * eta,
         ]
     return dzdt
 
