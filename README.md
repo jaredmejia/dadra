@@ -15,6 +15,10 @@ To install the current release of DaDRA:
 ```
 $ pip install --upgrade dadra
 ```
+or
+```
+$ conda install -c jaredmejia dadra
+```
 
 ## Resources
 * [PyPi](https://pypi.org/project/dadra/)
@@ -23,7 +27,9 @@ $ pip install --upgrade dadra
 * [Issue tracking](https://github.com/JaredMejia/dadra/issues)
 
 ## Usage
-See this [Lorenz System Example](https://dadra.readthedocs.io/en/latest/examples.html#lorenz-system-example) in the [documentation](https://dadra.readthedocs.io/en/latest/).
+See these examples from the [documentation](https://dadra.readthedocs.io/en/latest/):
+* [Lorenz System with disturbance using Scenario Approach](https://dadra.readthedocs.io/en/latest/examples.html#lorenz-system-with-disturbance-using-scenario-approach)
+* [Duffing Oscillator using Christoffel Functions](https://dadra.readthedocs.io/en/latest/examples.html#duffing-oscillator-using-christoffel-functions)
 
 ## Contributing
 For contributions, please follow the workflow:
