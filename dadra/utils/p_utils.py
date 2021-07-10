@@ -4,6 +4,7 @@ import numpy as np
 
 from functools import partial
 from scipy.optimize import minimize_scalar
+from tqdm.auto import tqdm
 
 
 def p_num_samples(epsilon, delta, n_x=3, const=None):
@@ -54,10 +55,10 @@ def solve_p_norm(sample, n_x=3, p=2, const=None):
     elif const == "scalar":
         sigma = cp.Variable()
         A = sigma * np.identity(n_x)
-        b = np.zeros((3, 1))
+        b = np.zeros((n_x, 1))
 
     obj = cp.Minimize(-cp.log_det(A))
-    constraints = [cp.pnorm(A @ r.reshape(3, 1) - b, p=p) <= 1 for r in sample]
+    constraints = [cp.pnorm(A @ r.reshape(n_x, 1) - b, p=p) <= 1 for r in sample]
     prob = cp.Problem(obj, constraints)
     prob.solve()
 
@@ -65,6 +66,31 @@ def solve_p_norm(sample, n_x=3, p=2, const=None):
         return A.value, b.value, prob.status
     else:
         return A, b, prob.status
+
+
+def multi_p_norm(samples, p=2, const=None):
+    """Computes a the p-norm ball reachable set estimates across a series of timesteps
+
+    :param samples: The samples from a dynamic system across time, an array of shape (num_samples, timesteps, state_dim)
+    :type samples: numpy.ndarray
+    :param p: The order of p-norm, defaults to 2
+    :type p: int, optional
+    :param const: The constraints placed on the parameters A and b, defaults to None
+    :type const: string, optional
+    :raises ValueError: [description]
+    :return: [description]
+    :rtype: [type]
+    """
+    if len(samples.shape) != 3:
+        raise ValueError("Samples must be of shape (num_samples, timesteps, state_dim")
+    n_x = samples.shape[2]
+    keys = ("A", "b", "status")
+    solutions = [
+        dict(zip(keys, solve_p_norm(sample, n_x, p, const)))
+        for sample in tqdm(samples.swapaxes(0, 1))
+    ]
+
+    return solutions
 
 
 def p_norm_cont(arr, axis, default_val, n_x, A_val, b_val, p, minimum=True):
@@ -131,7 +157,7 @@ def p_norm_cont_proj(arr, axis, default_val, n_x, A_val, b_val, p):
     :return: The value at the specified axis which corresponds the the minimum p-Norm value of the (n_x, 1)  vector.
     :rtype: float
     """
-    vec = np.zeros((3))
+    vec = np.zeros((n_x))
     other_dims = list(range(n_x))
     other_dims.remove(axis)
     for i, j in zip(other_dims, range(n_x - 1)):
@@ -139,12 +165,12 @@ def p_norm_cont_proj(arr, axis, default_val, n_x, A_val, b_val, p):
 
     def f(x):
         vec[axis] = x
-        return np.linalg.norm(A_val @ vec.reshape((3, 1)) - b_val, ord=p)
+        return np.linalg.norm(A_val @ vec.reshape((n_x, 1)) - b_val, ord=p)
 
     res = minimize_scalar(f)
     vec[axis] = res.x
 
-    if np.linalg.norm(A_val @ vec.reshape((3, 1)) - b_val, ord=p) <= 1:
+    if np.linalg.norm(A_val @ vec.reshape((n_x, 1)) - b_val, ord=p) <= 1:
         return res.x
     else:
         return default_val
@@ -288,6 +314,35 @@ def p_compute_contour_3D(sample, A_val, b_val, cont_axis=2, n_x=3, p=2, grid_n=2
     )
 
     return d0, d1, cont_min, cont_max, c_min, c_max
+
+
+def p_compute_vals(sample, A_val, b_val, p=2, grid_n=200):
+    """Computes the values within a p-norm ball in 1 dimension
+
+    :param sample: The sample from a specific time step, an array of shape (num_samples,)
+    :type sample: numpy.ndarray
+    :param A_val: The matrix of shape (1, 1) corresponding to the optimal p-norm ball
+    :type A_val: numpy.ndarray
+    :param b_val: The vector of shape (1, 1) corresponding to the optimal p-norm ball
+    :type b_val: numpy.ndarray
+    :param p: The order of p-norm, defaults to 2
+    :type p: int, optional
+    :param grid_n: The number of points to test for the p-norm ball estimation at each a given time step, defaults to 200
+    :type grid_n: int, optional
+    :return: The values within the p-norm ball
+    :rtype: list
+    """
+    # assuming sample is (num_samples,) shaped array
+    y_min, y_max = sample.min(), sample.max()
+    y = np.linspace(
+        y_min - 0.4 * (y_max - y_min), y_max + 0.4 * (y_max - y_min), grid_n
+    )
+
+    vals = []
+    for v in y:
+        if np.linalg.norm(A_val @ np.array([[v]]) - b_val, ord=p) <= 1:
+            vals.append(v)
+    return vals
 
 
 def p_emp_estimate(samples, A_val, b_val, n_x=3, p=2):

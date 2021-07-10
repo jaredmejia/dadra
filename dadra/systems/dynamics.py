@@ -145,3 +145,77 @@ def traffic(y, t, d=0):
         )
     dy[-1] = 1 / T * (b * min(c, v * y[-2], w * (xbar - y[-1])) - min(c, v * y[-1]))
     return dy
+
+
+def quadrotor(x, t, g=9.81, R=0.1, l=0.5, M_rotor=0.1, M=1.0, u1=1.0, u2=0.0, u3=0.0):
+    """Defines the dynamics of a 12-state Quadrotor Model based on initial states
+
+    :param x: 12 state input vector
+    :type x: numpy.array
+    :param t: The time
+    :type t: [type]
+    :param g: The gravity constant, defaults to 9.81
+    :type g: float, optional
+    :param R: The radius of center mass, defaults to 0.1
+    :type R: float, optional
+    :param l: The distance of motors to center mass, defaults to 0.5
+    :type l: float, optional
+    :param M_rotor: The motor mass, defaults to 0.1
+    :type M_rotor: float, optional
+    :param M: The center mass, defaults to 1.0
+    :type M: float, optional
+    :param u1: The desired height, defaults to 1.0
+    :type u1: float, optional
+    :param u2: The desired roll, defaults to 0.0
+    :type u2: float, optional
+    :param u3: The desired pitch, defaults to 0.0
+    :type u3: float, optional
+    :return: The partial derivatives of the 12-state quadrotor model
+    :rtype: list
+    """
+    x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12 = x
+
+    # total mass
+    m = M + 4.0 * M_rotor
+
+    # moments of inertia
+    Jx = 2.0 / 5.0 * M * (R ** 2) + 2.0 * (l ** 2) * M_rotor
+    Jy = Jx
+    Jz = 2.0 / 5.0 * M * (R ** 2) + 4.0 * (l ** 2) * M_rotor
+
+    # height control
+    F = (m * g - 10.0 * (x3 - u1)) + 3.0 * x6
+
+    # roll control
+    tau_phi = -(x7 - u2) - x10
+
+    # pitch control
+    tau_theta = -(x8 - u3) - x11
+
+    # heading uncontrolled
+    tau_psi = 0
+
+    dx1 = (
+        np.cos(x8) * np.cos(x9) * x4
+        + (np.sin(x7) * np.sin(x8) * np.cos(x9) - np.cos(x7) * np.sin(x9)) * x5
+        + (np.cos(x7) * np.sin(x8) * np.cos(x9) + np.sin(x7) * np.sin(x9)) * x6
+    )
+    dx2 = (
+        np.cos(x8) * np.sin(x9) * x4
+        + (np.sin(x7) * np.sin(x8) * np.sin(x9) + np.cos(x7) * np.cos(x9)) * x5
+        + (np.cos(x7) * np.sin(x8) * np.sin(x9) - np.sin(x7) * np.cos(x9)) * x6
+    )
+    dx3 = np.sin(x8) * x4 - np.sin(x7) * np.cos(x8) * x5 - np.cos(x7) * np.cos(x8) * x6
+    dx4 = x12 * x5 - x11 * x6 - g * np.sin(x8)
+    dx5 = x10 * x6 - x12 * x4 + g * np.cos(x8) * np.sin(x7)
+    dx6 = x11 * x4 - x10 * x5 + g * np.cos(x8) * np.cos(x7) - F / m
+    dx7 = x10 + np.sin(x7) * np.tan(x8) * x11 + np.cos(x7) * np.tan(x8) * x12
+    dx8 = np.cos(x7) * x11 - np.sin(x7) * x12
+    dx9 = np.sin(x7) / np.cos(x8) * x11 + np.cos(x7) / np.cos(x8) * x12
+    dx10 = (Jy - Jz) / Jx * x11 * x12 + 1 / Jx * tau_phi
+    dx11 = (Jz - Jx) / Jy * x10 * x12 + 1 / Jy * tau_theta
+    dx12 = (Jx - Jy) / Jz * x10 * x11 + 1 / Jz * tau_psi
+
+    dx = [dx1, dx2, dx3, dx4, dx5, dx6, dx7, dx8, dx9, dx10, dx11, dx12]
+
+    return dx

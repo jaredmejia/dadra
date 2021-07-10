@@ -31,6 +31,86 @@ def plot_sample(sample, fig_name):
         plt.savefig(fig_name)
 
 
+def plot_sample_time(time_x, samples, fig_name, color="default"):
+    """Plots trajectory of samples over time.
+
+    :param time_x: The time corresponding to the independent variable
+    :type time_x: numpy.array
+    :param samples: The samples of shape (num_samples, parts)
+    :type samples: numpy.array
+    :param fig_name: The name of the file to save the plot to
+    :type fig_name: str
+    :param color: The color to draw the lines in, defaults to "default"
+    :type color: str, optional
+    :raises ValueError: If samples is not an array of shape (num_samples, parts)
+    """
+    if len(samples.shape) != 2:
+        raise ValueError("Samples must be of shape (num_samples, parts)")
+
+    plt.figure(figsize=(10, 10))
+    for i in range(samples.shape[0]):
+        if color == "default":
+            plt.plot(time_x, samples[i])
+        else:
+            plt.plot(time_x, samples[i], color=color)
+    plt.xlabel("time")
+    plt.savefig(fig_name)
+
+
+def plot_reach_time(
+    time_x,
+    samples,
+    min_vals,
+    max_vals,
+    fig_name,
+    num_samples_show=0,
+    c1="palevioletred",
+    c2="lavenderblush",
+    **kwargs,
+):
+    """Plots the reachable set estimate (as well as possibly some samples) over time.
+
+    :param time_x: The time corresponding to the independent variable
+    :type time_x: numpy.array
+    :param samples: The samples of shape (num_samples, parts)
+    :type samples: numpy.array
+    :param min_vals: The lower bound of the reachable set estimate
+    :type min_vals: list
+    :param max_vals: The upper bound of the reachable set estimate
+    :type max_vals: list
+    :param fig_name: The name of the file to save the plot to
+    :type fig_name: str
+    :param num_samples_show: The number of sample trajectories to show in addition to the reachable set, defaults to 0
+    :type num_samples_show: int, optional
+    :param c1: Color 1, used for the reachable set estimate, defaults to "palevioletred"
+    :type c1: str, optional
+    :param c2: Color 2, used for the samples, defaults to "lavendarblush"
+    :type c2: str, optional
+    """
+    plt.figure(figsize=(10, 10))
+
+    plt.plot(time_x, min_vals, c=c1)
+    plt.plot(time_x, max_vals, c=c1)
+    plt.fill_between(time_x, min_vals, max_vals, color=c1)
+
+    for i in range(num_samples_show):
+        plt.plot(time_x, samples[i], color=c2, alpha=0.2)
+
+    xmin, xmax, ymin, ymax = plt.axis()
+
+    # assume kwargs are of the form {"x"=[1], "y"=[0.98, 1.4]}
+    for key in kwargs:
+        if key == "x":
+            for val in kwargs["x"]:
+                plt.plot([val, val], [ymin, ymax], "k", alpha=0.5)
+        elif key == "y":
+            for val in kwargs["y"]:
+                plt.plot([xmin, xmax], [val, val], "k", alpha=0.5)
+
+    plt.xlabel("time")
+    plt.savefig(fig_name)
+
+
 def plot_contour_2D(
     xv1,
     yv1,

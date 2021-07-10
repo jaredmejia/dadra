@@ -4,7 +4,13 @@ import time
 import warnings
 
 from dadra.dyn_sys import SimpleSystem, System
-from dadra.utils.graph_utils import plot_contour_2D, plot_contour_3D, plot_sample
+from dadra.utils.graph_utils import (
+    plot_contour_2D,
+    plot_contour_3D,
+    plot_reach_time,
+    plot_sample,
+    plot_sample_time,
+)
 from dadra.utils.christoffel_utils import (
     c_compute_contours,
     c_emp_estimate,
@@ -14,8 +20,10 @@ from dadra.utils.christoffel_utils import (
 )
 from dadra.utils.misc_utils import format_time
 from dadra.utils.p_utils import (
+    multi_p_norm,
     p_compute_contour_2D,
     p_compute_contour_3D,
+    p_compute_vals,
     p_emp_estimate,
     p_num_samples,
     solve_p_norm,
@@ -36,7 +44,7 @@ class Estimator:
     :param p: The order of p-norm, defaults to 2
     :type p: int, optional
     :param const: The constraints placed on the parameters A and b, defaults to None
-    :type const: string, optional
+    :type const: str, optional
     :param normalize: If true, the sample is normalized, defaults to True
     :type normalize: bool, optional
     :param d: The degree of polynomial features points are mapped to, defaults to 10
@@ -49,6 +57,8 @@ class Estimator:
     :type rbf: bool, optional
     :param scale: The length scale of the kernel, defaults to 1.0
     :type scale: float, optional
+    :param iso_dim: Isolates the samples at the specified dimension, currently only implemented when dyn_sys.all_time is True, defaults to None
+    :type iso_dim: int, optional
     """
 
     def __init__(
@@ -65,6 +75,7 @@ class Estimator:
         rho=0.0001,
         rbf=False,
         scale=1.0,
+        iso_dim=None,
     ):
 
         self.dyn_sys = dyn_sys
@@ -89,11 +100,19 @@ class Estimator:
         self.num_samples = self.get_num_samples()
 
         self.samples = None
+        self.iso_dim = None
 
         if not christoffel:
-            self.A = None
-            self.b = None
-            self.status = None
+            if not self.dyn_sys.all_time:
+                self.A = None
+                self.b = None
+                self.status = None
+            else:
+                self.iso_dim = iso_dim
+                self.solution_list = None
+                self.num_opt = None
+                self.num_opt_in = None
+                self.num_fail = None
         else:
             self.C = None
             self.level = None
@@ -282,14 +301,32 @@ class Estimator:
 
         if self.normalize:
             samples = (samples - np.mean(samples, axis=0)) / np.std(samples)
+
+        if self.iso_dim is not None:
+            samples = samples[:, :, self.iso_dim]
+            samples = np.expand_dims(
+                samples, axis=2
+            )  # since multi_p_norm expects (num_samples, timesteps, state_dim) shape
+            print(f"samples shape: {samples.shape}")
+
         return samples
 
     def estimate(self):
-        """Draws the samples and makes an estimate of the reachable set"""
+        """Both draws the samples and makes an estimate of the reachable set"""
+        self.sample_system()
+        self.compute_estimate()
+
+    def sample_system(self):
+        """Draws and stores samples from the system"""
         self.samples = self.get_sample()
 
+    def compute_estimate(self):
+        """Computes an estimate of the reachable set based on the type of method specified"""
         if not self.christoffel:
-            self.A, self.b, self.status = self.solve_p()
+            if not self.dyn_sys.all_time:
+                self.A, self.b, self.status = self.solve_p()
+            else:
+                self.solution_list = self.solve_p()
         else:
             self.C, self.level = self.construct_christoffel()
 
@@ -301,19 +338,77 @@ class Estimator:
         """
         print(f"Solving for optimal p-norm ball (p={self.p})")
         start_time = time.perf_counter()
-        A, b, status = solve_p_norm(
-            self.samples, self.dyn_sys.state_dim, self.p, self.const
-        )
-        end_time = time.perf_counter()
-        if status != "optimal":
-            warnings.warn("Failed to find optimal solution for p-norm ball")
-        else:
+        if not self.dyn_sys.all_time:
+            A, b, status = solve_p_norm(
+                self.samples, self.dyn_sys.state_dim, self.p, self.const
+            )
+            end_time = time.perf_counter()
+
             print(
                 f"Time to solve for optimal p-norm ball: {format_time(end_time - start_time)}"
             )
-        return A, b, status
+
+            if status != "optimal":
+                warnings.warn(
+                    f"Solution for p-norm ball is not optimal: status = {status}"
+                )
+
+            return A, b, status
+
+        else:
+            solution_list = multi_p_norm(self.samples, self.p, self.const)
+            end_time = time.perf_counter()
+
+            print(
+                f"Time to solve for optimal p-norm ball for all timesteps: {format_time(end_time - start_time)}"
+            )
+
+            start_check = time.perf_counter()
+            self.check_statuses(solution_list)
+            end_check = time.perf_counter()
+
+            print(
+                f"Time to check each solution status: {format_time(end_check-start_check)}"
+            )
+
+            if self.num_opt != len(solution_list):
+                warnings.warn(
+                    "Not all p-norm ball solutions across the timesteps are optimal"
+                    + "\n"
+                    + f"number of optimal solutions: {self.num_opt}"
+                    + "\n"
+                    + f"number of optimal inaccurate solutions: {self.num_opt_in}"
+                    + "\n"
+                    + f"number of infeasible or unbounded solutions: {self.num_fail}"
+                )
+
+            return solution_list
+
+    def check_statuses(self, solution_list=None):
+        """Checks the status of each of the solutions in the list of p-norm ball solutions
+
+        :param solution_list: List of solutions where each solution is a tuple of the form (A, b, status), defaults to None
+        :type solution_list: list, optional
+        """
+        self.num_opt = 0
+        self.num_opt_in = 0
+        self.num_fail = 0
+        s_list = solution_list if solution_list is not None else self.solution_list
+        for d in s_list:
+            status = d["status"]
+            if status == "optimal":
+                self.num_opt += 1
+            elif status == "optimal_inaccurate":
+                self.num_opt_in += 1
+            else:
+                self.num_fail += 1
 
     def construct_christoffel(self):
+        """Constructs the inverse Christoffel function and the respective level parameter from the samples
+
+        :return: the inverse Christoffel function and the level parameter
+        :rtype: tuple
+        """
         if self.kernelized:
             C = construct_kernelized_inv_christoffel(
                 self.samples, self.d, rho=self.rho, rbf=self.rbf, scale=self.scale
@@ -386,13 +481,28 @@ class Estimator:
             summary_str += f"Method of estimation: p-Norm Ball" + "\n"
             summary_str += f"p-norm p value: {self.p}" + "\n"
             summary_str += f"Constraints on p-norm ball: {self.const}" + "\n"
-            if all([self.A is None, self.b is None, self.status is None]):
-                summary_str += (
-                    f"Status of p-norm ball solution: No estimate has been made yet"
-                    + "\n"
-                )
+            if not self.dyn_sys.all_time:
+                if all([self.A is None, self.b is None, self.status is None]):
+                    summary_str += (
+                        f"Status of p-norm ball solution: No estimate has been made yet"
+                        + "\n"
+                    )
+                else:
+
+                    summary_str += (
+                        f"Status of p-norm ball solution: {self.status}" + "\n"
+                    )
             else:
-                summary_str += f"Status of p-norm ball solution: {self.status}" + "\n"
+                if self.solution_list is None:
+                    summary_str += (
+                        f"Status of p-norm ball solutions: No estimates have been made yet"
+                        + "\n"
+                    )
+                else:
+                    summary_str += (
+                        f"Ratio of failed p-norm ball solutions: {self.num_fail / len(self.solution_list)}"
+                        + "\n"
+                    )
         else:
             summary_str += f"Method of estimation: Inverse Christoffel Function" + "\n"
             summary_str += f"Degree of polynomial features: {self.d}" + "\n"
@@ -417,19 +527,59 @@ class Estimator:
         )
         print(summary_str)
 
-    def plot_samples(self, fig_name):
-        """Plots the samples of of shape (num_items, 3) in 3D
+    def plot_samples(self, fig_name, color="default"):
+        """Plots the samples of of shape (num_items, state_dim) in 2D
 
         :param fig_name: The name of the file to save the plot to
-        :type fig_name: string
+        :type fig_name: str
         """
-        plot_sample(self.samples, fig_name)
+        if not self.dyn_sys.all_time and self.iso_dim is None:
+            plot_sample(self.samples, fig_name)
+        else:
+            time_x = np.linspace(0, self.dyn_sys.timesteps, self.dyn_sys.parts)
+            sample_squeezed = np.squeeze(self.samples, axis=2)
+            plot_sample_time(time_x, sample_squeezed, fig_name, color=color)
+
+    def plot_reachable_time(self, fig_name, grid_n=200, num_samples_show=0, **kwargs):
+        """Plots the reachable set estimate (as well as possibly some samples) over time.
+
+        :param fig_name: The name of the file to save the plot to
+        :type fig_name: str
+        :param grid_n: The number of points to test for the p-norm ball estimation at each time step, defaults to 200
+        :type grid_n: int, optional
+        :param num_samples_show: The number of sample trajectories to show in addition to the reachable set, defaults to 0
+        :type num_samples_show: int, optional
+        """
+        if not self.dyn_sys.all_time:
+            warnings.warn(
+                "`plot_reachable_time` is meant for samples across all timesteps"
+            )
+
+        time_x = np.linspace(0, self.dyn_sys.timesteps, self.dyn_sys.parts)
+        samples_squeezed = np.squeeze(self.samples, axis=2)
+
+        min_vals, max_vals = [], []
+        for i in range(self.dyn_sys.parts):
+            A_i, b_i = self.solution_list[i]["A"], self.solution_list[i]["b"]
+            vals_i = p_compute_vals(samples_squeezed[:, i], A_i, b_i, grid_n=grid_n)
+            min_vals.append(min(vals_i))
+            max_vals.append(max(vals_i))
+
+        plot_reach_time(
+            time_x,
+            samples_squeezed,
+            min_vals,
+            max_vals,
+            fig_name,
+            num_samples_show=num_samples_show,
+            **kwargs,
+        )
 
     def plot_2D_cont(self, fig_name, grid_n=200):
         """Computes the contours of the reachable set and plots them in 2D
 
         :param fig_name: The name of the file to save the plot to
-        :type fig_name: string
+        :type fig_name: str
         :param grid_n: The side length of the cube of points to be used for computing contours, defaults to 200
         :type grid_n: int
         """
@@ -483,11 +633,11 @@ class Estimator:
         """Computes and plots the contours in 3D with the option for saving an animated gif of the rotating graph
 
         :param fig_name: The name of the file to save the plot to
-        :type fig_name: string
+        :type fig_name: str
         :param grid_n: The side length of the cube of points to be used for computing contours, defaults to 100
         :type grid_n: int
         :param gif_name: The name of the file to save the gif to, defaults to None
-        :type gif_name: string, optional
+        :type gif_name: str, optional
         """
         print("Computing 3D contour")
         cont_start = time.perf_counter()

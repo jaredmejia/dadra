@@ -58,7 +58,7 @@ def sample_lorenz(x=None, disturbance: Disturbance = None, timesteps=100, parts=
     return sol[-1]
 
 
-def sample_quadrotor(x=None, timesteps=5, parts=5001):
+def sample_planar_quadrotor(x=None, timesteps=5, parts=5001):
     """Obtains a sample from a Planar Quadrotor Model over the specified number of timesteps
 
     :param x: Placeholder variable over which to evaluate, defaults to None
@@ -115,6 +115,26 @@ def sample_traffic(x=None, nx=6, timesteps=100, parts=10001):
     return sol[-1]
 
 
+def sample_quadrotor(x=None, timesteps=5, parts=5001):
+    """Obtains sample from the 12-state Quadrotor Model across all timesteps
+
+    :param x: Placeholder variable over which to evaluate, defaults to None
+    :type x: NoneType, optional
+    :param timesteps: The number of timesteps over which to compute the sample, defaults to 5
+    :type timesteps: int, optional
+    :param parts: The number of parts to partition the time interval into for computing the sample, defaults to 5001
+    :return: The sample from the 12-state Quadrotor Model accross all timesteps
+    :rtype: numpy.ndarray
+    """
+    t = np.linspace(0, timesteps, parts)
+    ru = default_rng().uniform
+    x1_0, x2_0, x3_0, x4_0, x5_0, x6_0 = [ru(-0.4, 0.4) for _ in range(6)]
+    rand_states = np.array([x1_0, x2_0, x3_0, x4_0, x5_0, x6_0])
+    x_0 = np.concatenate((rand_states, np.zeros(6)))
+    sol = odeint(quadrotor, x_0, t)
+    return sol
+
+
 sample_oscillator_n = make_sample_n(sample_oscillator)
 """Function to sample from a Duffing Oscillator
 
@@ -130,7 +150,7 @@ sample_lorenz_n = make_sample_n(sample_lorenz)
 :type n: int
 """
 
-sample_quadrotor_n = make_sample_n(sample_quadrotor)
+sample_planar_quadrotor_n = make_sample_n(sample_planar_quadrotor)
 """Function to sample from a Planar Quadrotor Model
 
 :param n: The number of samples to compute.
@@ -140,6 +160,13 @@ sample_quadrotor_n = make_sample_n(sample_quadrotor)
 
 sample_traffic_n = make_sample_n(sample_traffic)
 """Function to sample from a Monotone Traffic Model
+
+:param n: The number of samples to compute.
+:type n: int
+"""
+
+sample_quadrotor_n = make_sample_n(sample_quadrotor)
+"""Function to sample from a 12-state Quadrotor Model
 
 :param n: The number of samples to compute.
 :type n: int

@@ -101,7 +101,7 @@ Lorenz System with disturbance using Scenario Approach
     """
 
     # save a plot and a rotating gif of the 3D contours of the estimated reachable set
-    lorenz_e.plot_3D_cont(
+    l_e.plot_3D_cont(
         "figures/l_estimate_3D.png", grid_n=100, gif_name="figures/l_estimate_3D.gif"
     )
 
@@ -205,3 +205,138 @@ Duffing Oscillator using Christoffel Functions
     """
     Time to compute contour: 00 minutes and 00 seconds
     """
+
+12 state Quadrotor using Scenario Approach
+-----------------------------------------------
+.. code-block:: python
+
+    import dadra 
+
+    # define the dynamics of the system
+    def quadrotor(x, t, g=9.81, R=0.1, l=0.5, M_rotor=0.1, M=1.0, u1=1.0, u2=0.0, u3=0.0):
+        x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12 = x
+
+        # total mass
+        m = M + 4.0 * M_rotor
+
+        # moments of inertia
+        Jx = 2.0 / 5.0 * M * (R ** 2) + 2.0 * (l ** 2) * M_rotor
+        Jy = Jx
+        Jz = 2.0 / 5.0 * M * (R ** 2) + 4.0 * (l ** 2) * M_rotor
+
+        # height control
+        F = (m * g - 10.0 * (x3 - u1)) + 3.0 * x6
+
+        # roll control
+        tau_phi = -(x7 - u2) - x10
+
+        # pitch control
+        tau_theta = -(x8 - u3) - x11
+
+        # heading uncontrolled
+        tau_psi = 0
+
+        dx1 = (
+            np.cos(x8) * np.cos(x9) * x4
+            + (np.sin(x7) * np.sin(x8) * np.cos(x9) - np.cos(x7) * np.sin(x9)) * x5
+            + (np.cos(x7) * np.sin(x8) * np.cos(x9) + np.sin(x7) * np.sin(x9)) * x6
+        )
+        dx2 = (
+            np.cos(x8) * np.sin(x9) * x4
+            + (np.sin(x7) * np.sin(x8) * np.sin(x9) + np.cos(x7) * np.cos(x9)) * x5
+            + (np.cos(x7) * np.sin(x8) * np.sin(x9) - np.sin(x7) * np.cos(x9)) * x6
+        )
+        dx3 = np.sin(x8) * x4 - np.sin(x7) * np.cos(x8) * x5 - np.cos(x7) * np.cos(x8) * x6
+        dx4 = x12 * x5 - x11 * x6 - g * np.sin(x8)
+        dx5 = x10 * x6 - x12 * x4 + g * np.cos(x8) * np.sin(x7)
+        dx6 = x11 * x4 - x10 * x5 + g * np.cos(x8) * np.cos(x7) - F / m
+        dx7 = x10 + np.sin(x7) * np.tan(x8) * x11 + np.cos(x7) * np.tan(x8) * x12
+        dx8 = np.cos(x7) * x11 - np.sin(x7) * x12
+        dx9 = np.sin(x7) / np.cos(x8) * x11 + np.cos(x7) / np.cos(x8) * x12
+        dx10 = (Jy - Jz) / Jx * x11 * x12 + 1 / Jx * tau_phi
+        dx11 = (Jz - Jx) / Jy * x10 * x12 + 1 / Jy * tau_theta
+        dx12 = (Jx - Jy) / Jz * x10 * x11 + 1 / Jz * tau_psi
+
+        dx = [dx1, dx2, dx3, dx4, dx5, dx6, dx7, dx8, dx9, dx10, dx11, dx12]
+
+        return dx
+
+    # define the intervals for the initial states of the variables in the system
+    q_state_dim = 12
+    q_intervals = [(-0.4, 0.4) for _ in range(6)]
+    q_intervals.extend([(0, 0) for _ in range(6)])
+
+    # instantiate a SimpleSystem object for a non-disturbed system
+    q_ss = dadra.SimpleSystem(
+        dyn_func=quadrotor,
+        intervals=q_intervals,
+        state_dim=q_state_dim,
+        timesteps=5,
+        parts=100,
+        all_time=True
+    )
+
+    # instantiate an Estimator object
+    q_e = dadra.Estimator(
+        dyn_sys=q_ss, 
+        epsilon=0.05,
+        delta=1e-9,
+        p=2,
+        normalize=False,
+        iso_dim=2
+    )
+    """
+    `iso_dim` specifies the dimension at which we will compute the reachable set over time.
+    In this case, the `iso_dim=2` corresponds to the altitude of the quadrotor
+    """
+
+    # print out a summary of the Estimator object
+    q_e.summary()
+    """
+    --------------------------------------------------------------------
+    Estimator Summary
+    ====================================================================
+    State dimension: 12
+    Accuracy parameter epsilon: 0.05
+    Confidence parameter delta: 1e-09
+    Number of samples: 3504
+    Method of estimation: p-Norm Ball
+    p-norm p value: 2
+    Constraints on p-norm ball: None
+    Status of p-norm ball solutions: No estimates have been made yet
+    --------------------------------------------------------------------
+    """
+
+    # draw samples from the system
+    q_e.sample_system()
+    """
+    Drawing 3504 samples
+    Using 16 CPUs
+
+    100%
+    3504/3504 [00:05<00:00, 678.82it/s]
+
+    Time to draw 3504 samples: 00 minutes and 05 seconds
+    samples shape: (3504, 100, 1)
+    """
+
+    # compute a reachable set estimate
+    q_e.compute_estimate()
+
+    # print out a summary of the Estimator object once more
+    q_e_4.summary()
+
+    # plot the trajectories of the samples over time
+    q_e_4.plot_samples("figures/quad_samples.png")
+    """
+    This saves a plot of altitude vs time 
+    """
+
+    # plot the reachable set estimate of the altitude over time 
+    q_e.plot_reachable_time(
+        "figures/quad_reachable.png",
+        grid_n=200, 
+        num_samples_show=50,
+        x=[1],
+        y=[0.9, 0.98, 1.02, 1.4]
+    )

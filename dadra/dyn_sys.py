@@ -103,21 +103,26 @@ class SimpleSystem(System):
     :type timesteps: int, optional
     :param parts: The number of parts to partition the time interval into for computing the sample, defaults to 1001
     :type parts: int, optional
+    :param all_time: If True, each sample will include all timesteps from the system, rather than only the last timestep, defaults to False
+    :type all_time: bool, optional
     """
 
-    def __init__(self, dyn_func, intervals, state_dim, timesteps=100, parts=1001):
+    def __init__(
+        self, dyn_func, intervals, state_dim, timesteps=100, parts=1001, all_time=False
+    ):
         """Constructor method"""
         self.dyn_func = dyn_func
         self.intervals = intervals
         self.state_dim = state_dim
         self.timesteps = timesteps
         self.parts = parts
+        self.all_time = all_time
 
         self.check_intervals()
         self.check_dyn_func()
 
     @classmethod
-    def from_list(cls, func_list, intervals, timesteps=100, parts=1001):
+    def from_list(cls, func_list, intervals, timesteps=100, parts=1001, all_time=False):
         """Class method that allows for an instance of :class:`dadra.DynamicSystem` to be initialized using a list of functions, one for each variable, to define the dynamics of a system rather than
         a single function
 
@@ -129,6 +134,8 @@ class SimpleSystem(System):
         :type timesteps: int, optional
         :param parts: The number of parts to partition the time interval into for computing the sample, defaults to 1001
         :type parts: int, optional
+        :param all_time: If True, each sample will include all timesteps from the system, rather than only the last timestep, defaults to False
+        :type all_time: bool, optional
         :raises TypeError: If not all functions in ``func_list`` are callable
         :raises ValueError: If not all functions in ``func_list`` include parameters for the intial state and time
         :raises ValueError: If not all functions in ``func_list`` include parameters for the intial state, time, and the provided additional arguments
@@ -157,7 +164,7 @@ class SimpleSystem(System):
                 )
 
         dyn_func = partial(SimpleSystem.dyn_to_sys, func_list=func_list)
-        dyn_sys = cls(dyn_func, intervals, state_dim, timesteps, parts)
+        dyn_sys = cls(dyn_func, intervals, state_dim, timesteps, parts, all_time)
 
         return dyn_sys
 
@@ -185,7 +192,7 @@ class SimpleSystem(System):
 
         :param x: Placeholder variable over which to evaluate, defaults to None
         :type x: NoneType, optional
-        :return: The sample from the specified system at the last timestep
+        :return: The sample from the specified system at the last timestep if the ``all_time`` is False and including all timesteps otherwise
         :rtype: numpy.ndarray
         """
         t = np.linspace(0, self.timesteps, self.parts)
@@ -197,7 +204,10 @@ class SimpleSystem(System):
             sol = odeint(self.dyn_func, initial_state, t, args=extra_intervs)
         else:
             sol = odeint(self.dyn_func, initial_state, t)
-        return sol[-1]
+        if not self.all_time:
+            return sol[-1]
+        else:
+            return sol
 
     def sample_system(self, N):
         """Draws ``N`` samples from the specified system
@@ -219,6 +229,7 @@ class DisturbedSystem(System):
         disturbance: Disturbance,
         timesteps=100,
         parts=1001,
+        all_time=False,
     ):
         """Class implementation of a dynamical system with disturbance that allows for parallelized sampling
 
@@ -233,6 +244,8 @@ class DisturbedSystem(System):
         :type timesteps: int, optional
         :param parts: The number of parts to partition the time interval into for computing the sample, defaults to 1001
         :type parts: int, optional
+        :param all_time: If True, each sample will include all timesteps from the system, rather than only the last timestep, defaults to False
+        :type all_time: bool, optional
         """
         self.dyn_func = dyn_func
         self.intervals = intervals
@@ -240,6 +253,7 @@ class DisturbedSystem(System):
         self.disturbance = disturbance
         self.timesteps = timesteps
         self.parts = parts
+        self.all_time = all_time
 
         self.check_intervals()
         self.check_dyn_func()
@@ -249,15 +263,17 @@ class DisturbedSystem(System):
 
         :param x: Placeholder variable over which to evaluate, defaults to None
         :type x: NoneType, optional
-        :return: The sample from the specified system at the last timestep
-        :rtype: numpy.ndarray
+        :return: The sample from the specified system at the last timestep if the ``all_time`` is False and including all timesteps otherwise
         """
         t = np.linspace(0, self.timesteps, self.parts)
         ru = default_rng().uniform
         initial_state = np.array([ru(lower, upper) for lower, upper in self.intervals])
         self.disturbance.draw_alphas()
         sol = odeint(self.dyn_func, initial_state, t, args=tuple([self.disturbance]))
-        return sol[-1]
+        if not self.all_time:
+            return sol[-1]
+        else:
+            return sol
 
     def sample_system(self, N):
         """Draws ``N`` samples from the specified system
