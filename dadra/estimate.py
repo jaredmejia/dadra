@@ -3,10 +3,12 @@ import numpy as np
 import time
 import warnings
 
-from dadra.dyn_sys import SimpleSystem, System
+from dadra.dyn_sys import Sampler, SimpleSystem, System
 from dadra.utils.graph_utils import (
+    grow_plot_3d,
     plot_contour_2D,
     plot_contour_3D,
+    plot_contour_3D_time,
     plot_reach_time,
     plot_sample,
     plot_sample_time,
@@ -24,7 +26,9 @@ from dadra.utils.p_utils import (
     p_compute_contour_2D,
     p_compute_contour_3D,
     p_compute_vals,
+    p_dict_list,
     p_emp_estimate,
+    p_get_dict,
     p_num_samples,
     solve_p_norm,
 )
@@ -57,8 +61,8 @@ class Estimator:
     :type rbf: bool, optional
     :param scale: The length scale of the kernel, defaults to 1.0
     :type scale: float, optional
-    :param iso_dim: Isolates the samples at the specified dimension, currently only implemented when dyn_sys.all_time is True, defaults to None
-    :type iso_dim: int, optional
+    :param iso_dim: Isolates the samples at the specified dimensions, currently only implemented when dyn_sys.all_time is True, defaults to None
+    :type iso_dim: list, optional
     """
 
     def __init__(
@@ -108,7 +112,12 @@ class Estimator:
                 self.b = None
                 self.status = None
             else:
-                self.iso_dim = iso_dim
+                self.iso_dim = (
+                    iso_dim
+                    if isinstance(iso_dim, list) or iso_dim is None
+                    else [iso_dim]
+                )
+                self.num_iso_samples = self.get_num_samples(iso=True)
                 self.solution_list = None
                 self.num_opt = None
                 self.num_opt_in = None
@@ -116,6 +125,88 @@ class Estimator:
         else:
             self.C = None
             self.level = None
+
+        if iso_dim is not None:
+            self.iso_samples = None
+
+    @classmethod
+    def estimator_from_sample_func(
+        cls,
+        sample_fn,
+        state_dim,
+        timesteps,
+        parts,
+        all_time=False,
+        epsilon=0.05,
+        delta=1e-9,
+        christoffel=False,
+        p=2,
+        const=None,
+        normalize=True,
+        d=10,
+        kernelized=False,
+        rho=0.0001,
+        rbf=False,
+        scale=0.5,
+        iso_dim=None,
+    ):
+        """Class method that allows for an instance of :class:`dadra.Estimator` to be initialized using a sampling function, and the components for an instance of :class:`Sampler` rather than explicitly passing in a :class:`System` object
+
+        :param sample_fn: A function to sample from
+        :type sample_fn: function
+        :param state_dim: The degrees of freedom of the system
+        :type state_dim: int
+        :param timesteps: The number of timesteps over which to compute the sample, defaults to 100
+        :type timesteps: int, optional
+        :param parts: The number of parts to partition the time interval into for computing the sample, defaults to 1001
+        :type parts: int, optional
+        :param all_time: If True, each sample will include all timesteps from the system, rather than only the last timestep, defaults to False
+        :type all_time: bool, optional
+        :param epsilon: The accuracy parameter, defaults to 0.05
+        :type epsilon: float, optional
+        :param delta: The confidence parameter, defaults to 1e-9
+        :type delta: float, optional
+        :param christoffel: If True, uses Christoffel functions to estimate the reachable set. If False, the p-norm method is used, defaults to False
+        :type christoffel: bool, optional
+        :param p: The order of p-norm, defaults to 2
+        :type p: int, optional
+        :param const: The constraints placed on the parameters A and b, defaults to None
+        :type const: string, optional
+        :param normalize: If true, the sample is normalized, defaults to True
+        :type normalize: bool, optional
+        :param d: The degree of polynomial features points are mapped to, defaults to 10
+        :type d: int, optional
+        :param kernelized: If True, the kernelized inverse christoffel function is constructed, defaults to False
+        :type kernelized: bool, optional
+        :param rho: Inverse Christoffel function constant rho, defaults to 0.0001
+        :type rho: float, optional
+        :param rbf: If True, a radical basis function kernel is used, defaults to False
+        :type rbf: bool, optional
+        :param scale: The length scale of the kernel, defaults to 1.0
+        :type scale: float, optional
+        :return: A :class:`dadra.Estimator` object
+        :rtype: :class:`dadra.Estimator`
+        :param iso_dim: Isolates the samples at the specified dimensions, currently only implemented when dyn_sys.all_time is True, defaults to None
+        :type iso_dim: list, optional
+        :return: A :class:`dadra.Estimator` object
+        :rtype: :class:`dadra.Estimator`
+        """
+        sampler = Sampler(sample_fn, state_dim, timesteps, parts, all_time=all_time)
+        return cls(
+            sampler,
+            epsilon=epsilon,
+            delta=delta,
+            christoffel=christoffel,
+            p=p,
+            const=const,
+            normalize=normalize,
+            d=d,
+            kernelized=kernelized,
+            rho=rho,
+            rbf=rbf,
+            scale=scale,
+            iso_dim=iso_dim,
+        )
 
     @classmethod
     def estimator_from_func(
@@ -136,6 +227,7 @@ class Estimator:
         rho=0.0001,
         rbf=False,
         scale=0.5,
+        iso_dim=None,
     ):
         """Class method that allows for an instance of :class:`dadra.Estimator` to be initialized
         using a dynamic function, and the components for an instance of :class:`SimpleSystem`
@@ -175,6 +267,10 @@ class Estimator:
         :type scale: float, optional
         :return: A :class:`dadra.Estimator` object
         :rtype: :class:`dadra.Estimator`
+        :param iso_dim: Isolates the samples at the specified dimensions, currently only implemented when dyn_sys.all_time is True, defaults to None
+        :type iso_dim: list, optional
+        :return: A :class:`dadra.Estimator` object
+        :rtype: :class:`dadra.Estimator`
         """
         dyn_sys = SimpleSystem(dyn_func, intervals, state_dim, timesteps, parts)
         return cls(
@@ -190,6 +286,7 @@ class Estimator:
             rho=rho,
             rbf=rbf,
             scale=scale,
+            iso_dim=iso_dim,
         )
 
     @classmethod
@@ -210,6 +307,7 @@ class Estimator:
         rho=0.0001,
         rbf=False,
         scale=0.5,
+        iso_dim=None,
     ):
         """Class method that allows for an instance of :class:`dadra.Estimator` to be initialized
         using a list of dynamic functions, and the components for an instance of :class:`SimpleSystem`
@@ -245,6 +343,8 @@ class Estimator:
         :type rbf: bool, optional
         :param scale: The length scale of the kernel, defaults to 1.0
         :type scale: float, optional
+        :param iso_dim: Isolates the samples at the specified dimensions, currently only implemented when dyn_sys.all_time is True, defaults to None
+        :type iso_dim: list, optional
         :return: A :class:`dadra.Estimator` object
         :rtype: :class:`dadra.Estimator`
         """
@@ -262,6 +362,7 @@ class Estimator:
             rho=rho,
             rbf=rbf,
             scale=scale,
+            iso_dim=iso_dim,
         )
 
     def check_sys(self):
@@ -272,13 +373,16 @@ class Estimator:
         if not isinstance(self.dyn_sys, System):
             raise TypeError("Object of type System must be passed")
 
-    def get_num_samples(self):
+    def get_num_samples(self, iso=False):
         """Compute the number of samples needed to satisfy the specified probabilistic guarantees
 
         :return: The number of samples needed to satisfy the specified probabilistic guarantees
         :rtype: int
         """
-        n_x = self.dyn_sys.state_dim
+        if not iso:
+            n_x = self.dyn_sys.state_dim
+        else:
+            n_x = len(self.iso_dim)
         if not self.christoffel:
             return p_num_samples(self.epsilon, self.delta, n_x, self.const)
         else:
@@ -302,13 +406,6 @@ class Estimator:
         if self.normalize:
             samples = (samples - np.mean(samples, axis=0)) / np.std(samples)
 
-        if self.iso_dim is not None:
-            samples = samples[:, :, self.iso_dim]
-            samples = np.expand_dims(
-                samples, axis=2
-            )  # since multi_p_norm expects (num_samples, timesteps, state_dim) shape
-            print(f"samples shape: {samples.shape}")
-
         return samples
 
     def estimate(self):
@@ -319,6 +416,25 @@ class Estimator:
     def sample_system(self):
         """Draws and stores samples from the system"""
         self.samples = self.get_sample()
+        print(f"Shape of all samples: {self.samples.shape}")
+
+        if self.iso_dim is not None:
+            self.iso_samples = self.samples[: self.num_iso_samples, :, self.iso_dim]
+            print(f"Shape of dimension reduced samples: {self.iso_samples.shape}")
+
+    def set_iso_dim(self, iso_dim):
+        """Sets the iso_dim attribute and updates iso_samples attribute to correspond to the new iso_dim
+
+        :param iso_dim: Isolates the samples at the specified dimensions
+        :type iso_dim: list, optional
+        """
+        self.iso_dim = (
+            iso_dim if isinstance(iso_dim, list) or iso_dim is None else [iso_dim]
+        )
+        if self.iso_dim is not None:
+            self.num_iso_samples = self.get_num_samples(iso=True)
+            print(f"Number of samples for isolated dimensions: {self.num_iso_samples}")
+            self.iso_samples = self.samples[: self.num_iso_samples, :, self.iso_dim]
 
     def compute_estimate(self):
         """Computes an estimate of the reachable set based on the type of method specified"""
@@ -337,10 +453,21 @@ class Estimator:
         :rtype: tuple
         """
         print(f"Solving for optimal p-norm ball (p={self.p})")
+
+        if self.iso_dim is None:
+            curr_samples = self.samples
+        else:
+            print(
+                f"Sovling for p-norm ball with respect to time at isolated dimensions: {self.iso_dim}"
+            )
+            curr_samples = self.iso_samples
+            if len(curr_samples.shape) != 3:
+                curr_samples = np.expand_dims(curr_samples, axis=2)
+
         start_time = time.perf_counter()
         if not self.dyn_sys.all_time:
             A, b, status = solve_p_norm(
-                self.samples, self.dyn_sys.state_dim, self.p, self.const
+                curr_samples, self.dyn_sys.state_dim, self.p, self.const
             )
             end_time = time.perf_counter()
 
@@ -356,7 +483,7 @@ class Estimator:
             return A, b, status
 
         else:
-            solution_list = multi_p_norm(self.samples, self.p, self.const)
+            solution_list = multi_p_norm(curr_samples, self.p, self.const)
             end_time = time.perf_counter()
 
             print(
@@ -373,7 +500,7 @@ class Estimator:
 
             if self.num_opt != len(solution_list):
                 warnings.warn(
-                    "Not all p-norm ball solutions across the timesteps are optimal"
+                    "Not all p-norm ball solutions across the timesteps are optimal accurate"
                     + "\n"
                     + f"number of optimal solutions: {self.num_opt}"
                     + "\n"
@@ -493,6 +620,12 @@ class Estimator:
                         f"Status of p-norm ball solution: {self.status}" + "\n"
                     )
             else:
+                if self.iso_dim is not None:
+                    summary_str += f"Isolated dimensions: {self.iso_dim}" + "\n"
+                    summary_str += (
+                        f"Number of samples for isolated dimensions: {self.num_iso_samples}"
+                        + "\n"
+                    )
                 if self.solution_list is None:
                     summary_str += (
                         f"Status of p-norm ball solutions: No estimates have been made yet"
@@ -527,53 +660,136 @@ class Estimator:
         )
         print(summary_str)
 
-    def plot_samples(self, fig_name, color="default"):
-        """Plots the samples of of shape (num_items, state_dim) in 2D
+    def plot_samples(
+        self,
+        fig_name,
+        gif_name=None,
+        max_num_samples=100,
+        figsize=(10, 10),
+        color="default",
+        **kwargs,
+    ):
+        """Plots the samples of 2-dimensional shape in 2D or samples of 3-dimensional shape in 3-dimensions drawn with respect to time
 
         :param fig_name: The name of the file to save the plot to
         :type fig_name: str
+        :param gif_name: The name of the animated gif to be saved, only applicable for 3-dimensional plots when all_time is True, defaults to None
+        :type gif_name: str, optional
+        :param max_num_samples: The maximum number of samples to plot, defaults to 100
+        :type max_num_samples: int, optional
+        :param figsize: the size of the figure to be saved, defaults to (10, 10)
+        :type figsize: tuple, optional
+        :param color: The color to draw the lines in, defaults to "default"
+        :type color: str, optional
+        :raises ValueError: If the samples are of an incompatible shape
         """
         if not self.dyn_sys.all_time and self.iso_dim is None:
-            plot_sample(self.samples, fig_name)
+            plot_sample(self.samples[:max_num_samples], fig_name)
         else:
-            time_x = np.linspace(0, self.dyn_sys.timesteps, self.dyn_sys.parts)
-            sample_squeezed = np.squeeze(self.samples, axis=2)
-            plot_sample_time(time_x, sample_squeezed, fig_name, color=color)
+            if len(self.iso_samples.shape) == 2 or self.iso_samples.shape[2] == 1:
+                if len(self.iso_samples.shape) != 2:
+                    sample_squeezed = np.squeeze(self.iso_samples, axis=2)
+                else:
+                    sample_squeezed = self.iso_samples
+                time_x = np.linspace(0, self.dyn_sys.timesteps, self.dyn_sys.parts)
 
-    def plot_reachable_time(self, fig_name, grid_n=200, num_samples_show=0, **kwargs):
-        """Plots the reachable set estimate (as well as possibly some samples) over time.
+                plot_sample_time(
+                    time_x,
+                    sample_squeezed[:max_num_samples],
+                    fig_name,
+                    figsize=figsize,
+                    color=color,
+                    **kwargs,
+                )
+
+            elif len(self.iso_samples.shape) == 3 and self.iso_samples.shape[2] == 3:
+                grow_plot_3d(
+                    self.iso_samples[:max_num_samples],
+                    fig_name,
+                    gif_name,
+                    figsize,
+                    **kwargs,
+                )
+
+            else:
+                raise ValueError(
+                    f"Cannot handle samples of shape: {self.iso_samples.shape}"
+                )
+
+    def plot_reachable_time(
+        self,
+        fig_name,
+        gif_name=None,
+        grid_n=200,
+        num_samples_show=50,
+        figsize=(10, 10),
+        **kwargs,
+    ):
+        """Plots the reachable set estimate (as well as possibly some samples) over time. Currently only implmented for p-norm balls
 
         :param fig_name: The name of the file to save the plot to
         :type fig_name: str
+        :param gif_name: The name of the animated gif to be saved, only applicable for 3-dimensional plots, defaults to None
+        :type gif_name: str, optional
         :param grid_n: The number of points to test for the p-norm ball estimation at each time step, defaults to 200
         :type grid_n: int, optional
-        :param num_samples_show: The number of sample trajectories to show in addition to the reachable set, defaults to 0
+        :param num_samples_show: The number of sample trajectories to show in addition to the reachable set, defaults to 50
         :type num_samples_show: int, optional
+        :param figsize: the size of the figure to be saved, defaults to (10, 10)
+        :type figsize: tuple, optional
         """
         if not self.dyn_sys.all_time:
             warnings.warn(
                 "`plot_reachable_time` is meant for samples across all timesteps"
             )
 
-        time_x = np.linspace(0, self.dyn_sys.timesteps, self.dyn_sys.parts)
-        samples_squeezed = np.squeeze(self.samples, axis=2)
+        if self.iso_dim is None:
+            curr_samples = self.samples
+        else:
+            curr_samples = self.iso_samples
 
-        min_vals, max_vals = [], []
-        for i in range(self.dyn_sys.parts):
-            A_i, b_i = self.solution_list[i]["A"], self.solution_list[i]["b"]
-            vals_i = p_compute_vals(samples_squeezed[:, i], A_i, b_i, grid_n=grid_n)
-            min_vals.append(min(vals_i))
-            max_vals.append(max(vals_i))
+        if len(curr_samples.shape) == 2 or curr_samples.shape[2] == 1:
+            if len(curr_samples.shape) != 2:
+                curr_samples = np.squeeze(curr_samples, axis=2)
 
-        plot_reach_time(
-            time_x,
-            samples_squeezed,
-            min_vals,
-            max_vals,
-            fig_name,
-            num_samples_show=num_samples_show,
-            **kwargs,
-        )
+        if len(curr_samples.shape) == 2:
+            min_vals, max_vals = [], []
+            for i in range(self.dyn_sys.parts):
+                A_i, b_i = self.solution_list[i]["A"], self.solution_list[i]["b"]
+                vals_i = p_compute_vals(curr_samples[:, i], A_i, b_i, grid_n=grid_n)
+                min_vals.append(min(vals_i))
+                max_vals.append(max(vals_i))
+
+            time_x = np.linspace(0, self.dyn_sys.timesteps, self.dyn_sys.parts)
+
+            plot_reach_time(
+                time_x,
+                curr_samples,
+                min_vals,
+                max_vals,
+                fig_name,
+                num_samples_show=num_samples_show,
+                figsize=figsize,
+                **kwargs,
+            )
+
+        elif len(curr_samples.shape) == 3 and curr_samples.shape[2] == 3:
+            dict_list = p_dict_list(
+                curr_samples,
+                self.solution_list,
+                self.dyn_sys.parts,
+                num_indices=20,
+                logspace=True,
+                grid_n=grid_n,
+            )
+            plot_contour_3D_time(
+                curr_samples[:num_samples_show],
+                dict_list,
+                fig_name,
+                gif_name,
+                figsize,
+                **kwargs,
+            )
 
     def plot_2D_cont(self, fig_name, grid_n=200):
         """Computes the contours of the reachable set and plots them in 2D

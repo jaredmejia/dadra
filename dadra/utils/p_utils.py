@@ -2,7 +2,9 @@ import cvxpy as cp
 import math
 import numpy as np
 
+from collections import OrderedDict
 from functools import partial
+from multiprocessing import Pool, cpu_count
 from scipy.optimize import minimize_scalar
 from tqdm.auto import tqdm
 
@@ -236,7 +238,9 @@ def p_compute_contour_2D(sample, A_val, b_val, cont_axis=2, n_x=3, p=2, grid_n=2
     return d0, d1, cont, c_min, c_max
 
 
-def p_compute_contour_3D(sample, A_val, b_val, cont_axis=2, n_x=3, p=2, grid_n=200):
+def p_compute_contour_3D(
+    sample, A_val, b_val, cont_axis=2, n_x=3, p=2, grid_n=200, stretch=0.4
+):
     """Computes the 3D contour for 3 dimensions based on sample data and the A_val, and b_val corresponding to the optimal p-norm ball.
 
     :param sample: Sample from dynamical system (num_samples, n_x)
@@ -253,6 +257,8 @@ def p_compute_contour_3D(sample, A_val, b_val, cont_axis=2, n_x=3, p=2, grid_n=2
     :type p: int, optional
     :param grid_n: The side length of the cube of points to be used for computing contours, defaults to 200
     :type grid_n: int, optional
+    :param stretch: The factor by which to stretch the grid used to compute the contour, defaults to 0.4
+    :type stretch: float, optional
     :param minimum: True if optimizing for the minimal value of the dependent variable that satisfies the p-norm conditions, defaults to True
     :type minimum: bool, optional
     :return: The meshgrid, corresponding computed contour, and the extremum values for the chosen axis
@@ -263,13 +269,13 @@ def p_compute_contour_3D(sample, A_val, b_val, cont_axis=2, n_x=3, p=2, grid_n=2
     z_min, z_max = sample[:, 2].min(), sample[:, 2].max()
 
     x = np.linspace(
-        x_min - 0.4 * (x_max - x_min), x_max + 0.4 * (x_max - x_min), grid_n
+        x_min - stretch * (x_max - x_min), x_max + stretch * (x_max - x_min), grid_n
     )
     y = np.linspace(
-        y_min - 0.4 * (y_max - y_min), y_max + 0.4 * (y_max - y_min), grid_n
+        y_min - stretch * (y_max - y_min), y_max + stretch * (y_max - y_min), grid_n
     )
     z = np.linspace(
-        x_min - 0.4 * (z_max - z_min), z_max + 0.4 * (z_max - z_min), grid_n
+        x_min - stretch * (z_max - z_min), z_max + stretch * (z_max - z_min), grid_n
     )
 
     if cont_axis == 2:
@@ -343,6 +349,76 @@ def p_compute_vals(sample, A_val, b_val, p=2, grid_n=200):
         if np.linalg.norm(A_val @ np.array([[v]]) - b_val, ord=p) <= 1:
             vals.append(v)
     return vals
+
+
+def p_get_dict(i, samples, solution_list, items, grid_n=50):
+    """Generates a dictionary where keys are the passed in labels and values are the output of p_compute_contour_3D, the contour information for a p-norm ball reachable set estimate at a given time
+
+    :param i: The index
+    :type i: int
+    :param samples: Array of shape (num_samples, time, 3)
+    :type samples: numpy.ndarray
+    :param solution_list: List of solutions where each solution is a dictionary with keys ("A", "b", "status"), defaults to None
+    :type solution_list: list, optional
+    :param items: A list of specific indices corresponding to the times at which the p-norm ball reachable set estimate will be chosen
+    :type items: list
+    :param grid_n: The side length of the cube of points to be used for computing contours, defaults to 50
+    :type grid_n: int, optional
+    :return: A dictionary where keys are the passed in labels and values are the output of p_compute_contour_3D, the contour information for a p-norm ball reachable set estimate at a given time
+    :rtype: dict
+    """
+    labels = ["xv", "yv", "z_cont", "z_cont2", "z_min", "z_max"]
+    index = items[i]
+    A_i, b_i = solution_list[index]["A"], solution_list[index]["b"]
+    return dict(
+        zip(labels, p_compute_contour_3D(samples[:, index, :], A_i, b_i, grid_n=grid_n))
+    )
+
+
+def p_dict_list(
+    samples, solution_list, num_parts, num_indices=20, logspace=True, grid_n=50
+):
+    """Generates a list of dictionaries, each containing the contour information for a p-norm ball reachable set estimate at a given time
+
+    :param samples: Array of shape (num_samples, time, 3)
+    :type samples: numpy.ndarray
+    :param solution_list: List of solutions where each solution is a dictionary with keys ("A", "b", "status"), defaults to None
+    :type solution_list: list, optional
+    :param num_parts: The number of total timesteps for the samples
+    :type num_parts: int
+    :param num_indices: The number of indices corresponding to the number of reachable set estimates made at different times, defaults to 20
+    :type num_indices: int, optional
+    :param logspace: If True, a logarithmic scale is used for choosing times to compute reachable set estimates, defaults to True
+    :type logspace: bool, optional
+    :param grid_n: The side length of the cube of points to be used for computing contours, defaults to 50
+    :type grid_n: int, optional
+    :return: A list of dictionaries, each containing the contour information for a p-norm ball reachable set estimate at a given time
+    :rtype: list
+    """
+    if logspace:
+        log_ceil = np.log10(num_parts)
+        items = list(
+            OrderedDict.fromkeys(
+                [int(i) - 1 for i in np.logspace(0, log_ceil, num_indices)]
+            )
+        )
+    else:
+        items = [int(i) for i in np.linspace(0, num_parts, num_indices)]
+
+    get_dict = partial(
+        p_get_dict,
+        samples=samples,
+        solution_list=solution_list,
+        items=items,
+        grid_n=grid_n,
+    )
+
+    p = Pool(cpu_count())
+    dict_list = [
+        d for d in tqdm(p.imap(get_dict, np.arange(len(items))), total=len(items))
+    ]
+
+    return dict_list
 
 
 def p_emp_estimate(samples, A_val, b_val, n_x=3, p=2):

@@ -5,7 +5,11 @@
 [![License](https://img.shields.io/pypi/l/dadra.svg)](https://github.com/dadra/blob/master/LICENSE)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-<img src="imgs/l_3D_cont.gif" width="500" height="500">
+<p float="left">
+  <img src="imgs/l_3D_cont.gif" width="300" height="300">
+  <img src="imgs/quad_reachable.png" width="300" height="300">
+  <img src="imgs/q_3d.gif" width="300" height="300">
+</p>
 
 ## What is it?
 **DaDRA** (day-druh) is a Python library for Data-Driven Reachability Analysis. The main goal of the package is to accelerate the process of computing estimates of forward reachable sets for nonlinear dynamical systems.
@@ -30,6 +34,7 @@ $ conda install -c jaredmejia dadra
 See these examples from the [documentation](https://dadra.readthedocs.io/en/latest/):
 * [Lorenz System with disturbance using Scenario Approach](https://dadra.readthedocs.io/en/latest/examples.html#lorenz-system-with-disturbance-using-scenario-approach)
 * [Duffing Oscillator using Christoffel Functions](https://dadra.readthedocs.io/en/latest/examples.html#duffing-oscillator-using-christoffel-functions)
+* [12-state Quadrotor using Scenario Approach](https://dadra.readthedocs.io/en/latest/examples.html#state-quadrotor-using-scenario-approach)
 
 ## Contributing
 For contributions, please follow the workflow:

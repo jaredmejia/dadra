@@ -28,10 +28,12 @@ def plot_sample(sample, fig_name):
         axs[2].plot(sample[:, 1], sample[:, 2], "k.")
         axs[2].set_xlabel("y")
         axs[2].set_ylabel("z")
-        plt.savefig(fig_name)
+        plt.savefig(fig_name, bbox_inches="tight", facecolor="white")
 
 
-def plot_sample_time(time_x, samples, fig_name, color="default"):
+def plot_sample_time(
+    time_x, samples, fig_name, figsize=(10, 10), color="default", **kwargs
+):
     """Plots trajectory of samples over time.
 
     :param time_x: The time corresponding to the independent variable
@@ -40,6 +42,8 @@ def plot_sample_time(time_x, samples, fig_name, color="default"):
     :type samples: numpy.array
     :param fig_name: The name of the file to save the plot to
     :type fig_name: str
+    :param figsize: the size of the figure to be saved, defaults to (10, 10)
+    :type figsize: tuple, optional
     :param color: The color to draw the lines in, defaults to "default"
     :type color: str, optional
     :raises ValueError: If samples is not an array of shape (num_samples, parts)
@@ -47,14 +51,29 @@ def plot_sample_time(time_x, samples, fig_name, color="default"):
     if len(samples.shape) != 2:
         raise ValueError("Samples must be of shape (num_samples, parts)")
 
-    plt.figure(figsize=(10, 10))
+    fig, axs = plt.subplots(1, figsize=figsize)
     for i in range(samples.shape[0]):
         if color == "default":
-            plt.plot(time_x, samples[i])
+            axs.plot(time_x, samples[i])
         else:
-            plt.plot(time_x, samples[i], color=color)
-    plt.xlabel("time")
-    plt.savefig(fig_name)
+            axs.plot(time_x, samples[i], color=color)
+
+    xmin, xmax, ymin, ymax = plt.axis()
+
+    for key in kwargs:
+        if key == "x":
+            for val in kwargs["x"]:
+                axs.plot([val, val], [ymin, ymax], "k", alpha=0.5)
+        elif key == "y":
+            for val in kwargs["y"]:
+                axs.plot([xmin, xmax], [val, val], "k", alpha=0.5)
+        elif key == "title":
+            axs.set_title(kwargs["title"])
+        elif key == "ylabel":
+            axs.set_ylabel(kwargs["ylabel"])
+
+    axs.set_xlabel("time")
+    plt.savefig(fig_name, bbox_inches="tight", facecolor="white")
 
 
 def plot_reach_time(
@@ -64,6 +83,7 @@ def plot_reach_time(
     max_vals,
     fig_name,
     num_samples_show=0,
+    figsize=(10, 10),
     c1="palevioletred",
     c2="lavenderblush",
     **kwargs,
@@ -82,19 +102,21 @@ def plot_reach_time(
     :type fig_name: str
     :param num_samples_show: The number of sample trajectories to show in addition to the reachable set, defaults to 0
     :type num_samples_show: int, optional
+    :param figsize: the size of the figure to be saved, defaults to (10, 10)
+    :type figsize: tuple, optional
     :param c1: Color 1, used for the reachable set estimate, defaults to "palevioletred"
     :type c1: str, optional
     :param c2: Color 2, used for the samples, defaults to "lavendarblush"
     :type c2: str, optional
     """
-    plt.figure(figsize=(10, 10))
+    fig, axs = plt.subplots(1, figsize=figsize)
 
-    plt.plot(time_x, min_vals, c=c1)
-    plt.plot(time_x, max_vals, c=c1)
-    plt.fill_between(time_x, min_vals, max_vals, color=c1)
+    axs.plot(time_x, min_vals, c=c1)
+    axs.plot(time_x, max_vals, c=c1)
+    axs.fill_between(time_x, min_vals, max_vals, color=c1)
 
     for i in range(num_samples_show):
-        plt.plot(time_x, samples[i], color=c2, alpha=0.2)
+        axs.plot(time_x, samples[i], color=c2, alpha=0.2)
 
     xmin, xmax, ymin, ymax = plt.axis()
 
@@ -102,12 +124,76 @@ def plot_reach_time(
     for key in kwargs:
         if key == "x":
             for val in kwargs["x"]:
-                plt.plot([val, val], [ymin, ymax], "k", alpha=0.5)
+                axs.plot([val, val], [ymin, ymax], "k", alpha=0.5)
         elif key == "y":
             for val in kwargs["y"]:
-                plt.plot([xmin, xmax], [val, val], "k", alpha=0.5)
+                axs.plot([xmin, xmax], [val, val], "k", alpha=0.5)
+        elif key == "title":
+            axs.set_title(kwargs["title"])
+        elif key == "ylabel":
+            axs.set_ylabel(kwargs["ylabel"])
 
-    plt.xlabel("time")
+    axs.set_xlabel("time")
+    plt.savefig(fig_name, bbox_inches="tight", facecolor="white")
+
+
+def grow_plot_3d(samples, fig_name, gif_name, figsize, **kwargs):
+    """Creates a gif of a three dimensional trajectory that is animated to grow over time
+
+    :param samples: Array of shape (num_samples, time, 3)
+    :type samples: numpy.ndarray
+    :param fig_name: The name of the static figure to be saved
+    :type fig_name: str
+    :param gif_name: The name of the animated gif to be saved, defaults to None
+    :type gif_name: str, optional
+    :raises ValueError: If the samples are not of shape (num_samples, time, 3)
+    """
+    if len(samples.shape) != 3 or samples.shape[2] != 3:
+        raise ValueError("The shape of samples must be (num_samples, time, 3)")
+
+    fig = plt.figure(figsize=figsize)
+    ax = plt.axes(projection="3d")
+
+    lines = []
+    for sample in samples:
+        (line,) = ax.plot(sample[:, 0], sample[:, 1], sample[:, 2], alpha=0.8)
+        lines.append(line)
+
+    if gif_name is not None:
+        ax.set_xlabel(kwargs.get("xlabel", "x"))
+        ax.set_ylabel(kwargs.get("ylabel", "y"))
+        ax.set_zlabel(kwargs.get("zlabel", "z"))
+        ax.set_title(kwargs.get("title", "trajectory over time"))
+
+        def update(num, samples, lines):
+            """Inner function to update line plot in 3D over time
+
+            :param num: The number of frames, and the number of points to plot
+            :type num: int
+            :param samples: Array of shape (num_samples, time, 3)
+            :type samples: numpy.ndarray
+            :param lines: A list of Line3D objects
+            :type lines: list
+            :return: An updated list of Line3D objects
+            :rtype: list
+            """
+            for line, sample in zip(lines, samples):
+                line.set_xdata(sample[:num, 0])
+                line.set_ydata(sample[:num, 1])
+                line.set_3d_properties(sample[:num, 2])
+            ax.view_init(azim=num)
+            return lines
+
+        ani = animation.FuncAnimation(
+            fig,
+            update,
+            frames=np.arange(0, 362, 2),
+            fargs=[samples, lines],
+            interval=100,
+        )
+
+        ani.save(gif_name)
+
     plt.savefig(fig_name)
 
 
@@ -172,7 +258,7 @@ def plot_contour_2D(
         axs.set_ylabel("y")
         axs.set_title("samples in x-y plane")
         plt.show()
-        plt.savefig(fig_name)
+        plt.savefig(fig_name, bbox_inches="tight", facecolor="white")
         return
 
     axs[0].plot(sample[:, 0], sample[:, 1], "k.")
@@ -195,7 +281,7 @@ def plot_contour_2D(
             axs[2].set_ylabel("z")
             axs[2].set_title("samples in y-z plane")
 
-    plt.savefig(fig_name)
+    plt.savefig(fig_name, bbox_inches="tight", facecolor="white")
 
 
 def plot_contour_3D(
@@ -289,4 +375,86 @@ def plot_contour_3D(
         )
         rot_animation.save(gif_name, dpi=100)
 
-    plt.savefig(fig_name)
+    plt.savefig(fig_name, bbox_inches="tight", facecolor="white")
+
+
+def plot_contour_3D_time(
+    samples, dict_list, fig_name, gif_name=None, figsize=(10, 10), **kwargs
+):
+    """Plots the contours of the p-norm reachable set estimate along with the samples over time
+
+    :param samples: Array of shape (num_samples, time, 3)
+    :type samples: numpy.ndarray
+    :param dict_list: A list of dictionaries, each containing the contour information for a p-norm ball reachable set estimate at a given time
+    :type dict_list: list
+    :param fig_name: The name of the file to save the plot to
+    :type fig_name: string
+    :param gif_name: The name of the file to save the gif to, defaults to None
+    :type gif_name: string, optional
+    :param figsize: The size of the figure to be saved, defaults to (10, 10)
+    :type figsize: tuple, optional
+    """
+    fig = plt.figure(figsize=figsize)
+    ax = plt.axes(projection="3d")
+
+    ax.set_xlabel(kwargs.get("xlabel", "x"))
+    ax.set_ylabel(kwargs.get("ylabel", "y"))
+    ax.set_zlabel(kwargs.get("zlabel", "z"))
+    ax.set_title(kwargs.get("title", "reachable set over time"))
+
+    for sample in samples:
+        ax.plot(sample[:, 0], sample[:, 1], sample[:, 2], alpha=0.8)
+
+    for curr_dict in dict_list:
+        xv = curr_dict["xv"]
+        yv = curr_dict["yv"]
+        z_cont = curr_dict["z_cont"]
+        z_min = curr_dict["z_min"]
+        z_max = curr_dict["z_max"]
+        z_cont2 = curr_dict["z_cont2"]
+
+        v_min = z_min - 0.25 * (z_max - z_min)
+        v_max = z_max + 0.4 * (z_max - z_min)
+
+        abs_min = np.min(z_cont)
+        abs_max = np.max(z_cont2)
+        abs_avg = (abs_min + abs_max) / 2
+        levels_1 = list(np.linspace(abs_min, abs_avg, 25))
+        levels_2 = list(np.linspace(abs_avg, abs_max, 25))
+
+        ax.contour3D(
+            xv,
+            yv,
+            z_cont,
+            50,
+            cmap="Blues",
+            vmin=v_min,
+            vmax=v_max,
+            levels=levels_1,
+            alpha=0.1,
+        )
+
+        ax.contour3D(
+            xv,
+            yv,
+            z_cont2,
+            50,
+            cmap="Blues",
+            vmin=v_min,
+            vmax=v_max,
+            levels=levels_2,
+            alpha=0.1,
+        )
+
+    if gif_name is not None:
+
+        def rotate(num):
+            ax.view_init(elev=20, azim=num)
+
+        ani = animation.FuncAnimation(
+            fig, rotate, frames=np.arange(0, 362, 2), interval=50
+        )
+
+        ani.save(gif_name)
+
+    plt.savefig(fig_name, bbox_inches="tight", facecolor="white")

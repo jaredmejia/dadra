@@ -284,3 +284,26 @@ class DisturbedSystem(System):
         :rtype: numpy.ndarray
         """
         return make_sample_n(self.system_sampler)(N)
+
+
+class Sampler(System):
+    """class implementation of a dynamical system with a means of sampling the system specified by the user
+
+    :param sample_fn: A function to sample from
+    :type sample_fn: function
+    :param state_dim: The degrees of freedom of the system
+    :type state_dim: int
+    :param timesteps: The number of timesteps over which to compute the sample, defaults to 100
+    :type timesteps: int, optional
+    :param parts: The number of parts to partition the time interval into for computing the sample, defaults to 1001
+    :type parts: int, optional
+    :param all_time: If True, each sample will include all timesteps from the system, rather than only the last timestep, defaults to False
+    :type all_time: bool, optional
+    """
+
+    def __init__(self, sample_fn, state_dim, timesteps, parts, all_time):
+        self.sample_system = make_sample_n(sample_fn)
+        self.state_dim = state_dim
+        self.timesteps = timesteps
+        self.parts = parts
+        self.all_time = all_time

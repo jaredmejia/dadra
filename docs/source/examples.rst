@@ -211,6 +211,7 @@ Duffing Oscillator using Christoffel Functions
 .. code-block:: python
 
     import dadra 
+    import numpy as np
 
     # define the dynamics of the system
     def quadrotor(x, t, g=9.81, R=0.1, l=0.5, M_rotor=0.1, M=1.0, u1=1.0, u2=0.0, u3=0.0):
