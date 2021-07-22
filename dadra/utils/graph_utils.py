@@ -1,3 +1,4 @@
+from multiprocessing import Value
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
@@ -38,7 +39,7 @@ def plot_sample_time(
 
     :param time_x: The time corresponding to the independent variable
     :type time_x: numpy.array
-    :param samples: The samples of shape (num_samples, parts)
+    :param samples: The samples of shape (num_samples, parts) or (num_samples, parts, 2)
     :type samples: numpy.array
     :param fig_name: The name of the file to save the plot to
     :type fig_name: str
@@ -48,15 +49,24 @@ def plot_sample_time(
     :type color: str, optional
     :raises ValueError: If samples is not an array of shape (num_samples, parts)
     """
-    if len(samples.shape) != 2:
-        raise ValueError("Samples must be of shape (num_samples, parts)")
+    if len(samples.shape) == 3 and samples.shape[2] != 2:
+        raise ValueError(
+            "The shape of samples must be either (num_samples, parts) or (num_samples, parts, 2)"
+        )
 
     fig, axs = plt.subplots(1, figsize=figsize)
-    for i in range(samples.shape[0]):
-        if color == "default":
-            axs.plot(time_x, samples[i])
-        else:
-            axs.plot(time_x, samples[i], color=color)
+    if len(samples.shape) == 3:
+        for sample in samples:
+            if color == "default":
+                axs.plot(sample[:, 0], sample[:, 1])
+            else:
+                axs.plot(sample[:, 0], sample[:, 1], color=color)
+    else:
+        for sample in samples:
+            if color == "default":
+                axs.plot(time_x, sample)
+            else:
+                axs.plot(time_x, sample, color=color)
 
     xmin, xmax, ymin, ymax = plt.axis()
 
@@ -285,15 +295,7 @@ def plot_contour_2D(
 
 
 def plot_contour_3D(
-    xv,
-    yv,
-    z_cont,
-    z_min,
-    z_max,
-    sample,
-    fig_name,
-    gif_name=None,
-    z_cont2=None,
+    xv, yv, z_cont, z_min, z_max, sample, fig_name, gif_name=None, z_cont2=None,
 ):
     """Plots the contours in 3D with the option for saving an animated gif of the rotating graph
 
@@ -340,24 +342,10 @@ def plot_contour_3D(
         levels_1 = list(np.linspace(abs_min, abs_avg, 25))
         levels_2 = list(np.linspace(abs_avg, abs_max, 25))
         ax.contour3D(
-            xv,
-            yv,
-            z_cont,
-            50,
-            cmap="Blues",
-            vmin=v_min,
-            vmax=v_max,
-            levels=levels_1,
+            xv, yv, z_cont, 50, cmap="Blues", vmin=v_min, vmax=v_max, levels=levels_1,
         )
         ax.contour3D(
-            xv,
-            yv,
-            z_cont2,
-            50,
-            cmap="Blues",
-            vmin=v_min,
-            vmax=v_max,
-            levels=levels_2,
+            xv, yv, z_cont2, 50, cmap="Blues", vmin=v_min, vmax=v_max, levels=levels_2,
         )
 
     ax.set_xlabel("x")

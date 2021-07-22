@@ -458,7 +458,7 @@ class Estimator:
             curr_samples = self.samples
         else:
             print(
-                f"Sovling for p-norm ball with respect to time at isolated dimensions: {self.iso_dim}"
+                f"Solving for p-norm ball with respect to time at isolated dimensions: {self.iso_dim}"
             )
             curr_samples = self.iso_samples
             if len(curr_samples.shape) != 3:
@@ -684,9 +684,13 @@ class Estimator:
         :raises ValueError: If the samples are of an incompatible shape
         """
         if not self.dyn_sys.all_time and self.iso_dim is None:
+            plot_start = time.perf_counter()
             plot_sample(self.samples[:max_num_samples], fig_name)
+            plot_end = time.perf_counter()
+            print(f"Time to plot samples: {format_time(plot_end - plot_start)}")
         else:
             if len(self.iso_samples.shape) == 2 or self.iso_samples.shape[2] == 1:
+                plot_start = time.perf_counter()
                 if len(self.iso_samples.shape) != 2:
                     sample_squeezed = np.squeeze(self.iso_samples, axis=2)
                 else:
@@ -701,14 +705,36 @@ class Estimator:
                     color=color,
                     **kwargs,
                 )
-
+                plot_end = time.perf_counter()
+                print(
+                    f"Time to plot samples in 2D over time: {format_time(plot_end - plot_start)}"
+                )
+            elif len(self.iso_samples.shape) == 3 and self.iso_samples.shape[2] == 2:
+                plot_start = time.perf_counter()
+                plot_sample_time(
+                    None,
+                    self.iso_samples,
+                    fig_name,
+                    figsize=figsize,
+                    color=color,
+                    **kwargs,
+                )
+                plot_end = time.perf_counter()
+                print(
+                    f"Time to plot samples in 2D over time: {format_time(plot_end - plot_start)}"
+                )
             elif len(self.iso_samples.shape) == 3 and self.iso_samples.shape[2] == 3:
+                plot_start = time.perf_counter()
                 grow_plot_3d(
                     self.iso_samples[:max_num_samples],
                     fig_name,
                     gif_name,
                     figsize,
                     **kwargs,
+                )
+                plot_end = time.perf_counter()
+                print(
+                    f"Time to plot samples in 3D over time: {format_time(plot_end - plot_start)}"
                 )
 
             else:
@@ -725,7 +751,7 @@ class Estimator:
         figsize=(10, 10),
         **kwargs,
     ):
-        """Plots the reachable set estimate (as well as possibly some samples) over time. Currently only implmented for p-norm balls
+        """Plots the reachable set estimate (as well as possibly some samples) over time. Currently only implemented for p-norm balls
 
         :param fig_name: The name of the file to save the plot to
         :type fig_name: str
@@ -753,6 +779,7 @@ class Estimator:
                 curr_samples = np.squeeze(curr_samples, axis=2)
 
         if len(curr_samples.shape) == 2:
+            plot_start = time.perf_counter()
             min_vals, max_vals = [], []
             for i in range(self.dyn_sys.parts):
                 A_i, b_i = self.solution_list[i]["A"], self.solution_list[i]["b"]
@@ -772,8 +799,20 @@ class Estimator:
                 figsize=figsize,
                 **kwargs,
             )
+            plot_end = time.perf_counter()
+            print(
+                f"time to plot 2D samples with respect to time: {format_time(plot_end - plot_start)}"
+            )
+
+        elif len(curr_samples.shape) == 3 and curr_samples.shape[2] == 2:
+            plot_start = time.perf_counter()
+            plot_end = time.perf_counter()
+            print(
+                f"time to plot 2D samples with respect to time: {format_time(plot_end - plot_start)}"
+            )
 
         elif len(curr_samples.shape) == 3 and curr_samples.shape[2] == 3:
+            plot_start = time.perf_counter()
             dict_list = p_dict_list(
                 curr_samples,
                 self.solution_list,
@@ -789,6 +828,15 @@ class Estimator:
                 gif_name,
                 figsize,
                 **kwargs,
+            )
+            plot_end = time.perf_counter()
+            print(
+                f"time to plot 3D samples with respect to time: {format_time(plot_end - plot_start)}"
+            )
+
+        else:
+            raise ValueError(
+                f"Cannot handle samples of shape: {self.iso_samples.shape}"
             )
 
     def plot_2D_cont(self, fig_name, grid_n=200):
@@ -816,8 +864,9 @@ class Estimator:
             xv2, zv1, y_cont, y_min, y_max = cont_compute(cont_axis=1)
             yv2, zv2, x_cont, x_min, x_max = cont_compute(cont_axis=0)
             cont_end = time.perf_counter()
-            print(f"Time to compute 2D contours: {format_time(cont_end - cont_start)}")
+            print(f"Time to compute contours: {format_time(cont_end - cont_start)}")
 
+            plot_start = time.perf_counter()
             plot_contour_2D(
                 xv1,
                 yv1,
@@ -834,6 +883,8 @@ class Estimator:
                 x_cont=x_cont,
                 x_level=x_max,
             )
+            plot_end = time.perf_counter()
+            print(f"time to plot contours in 2D: {format_time(plot_end - plot_start)}")
 
         else:
             start_comp_cont = time.perf_counter()
@@ -842,8 +893,10 @@ class Estimator:
             print(
                 f"Time to compute contour: {format_time(end_comp_cont - start_comp_cont)}"
             )
-
+            plot_start = time.perf_counter()
             plot_contour_2D(xv, yv, cont, self.level, self.samples, fig_name)
+            plot_end = time.perf_counter()
+            print(f"time to plot contours in 2D: {format_time(plot_end - plot_start)}")
 
     def plot_3D_cont(self, fig_name, grid_n=100, gif_name=None):
         """Computes and plots the contours in 3D with the option for saving an animated gif of the rotating graph
@@ -861,8 +914,9 @@ class Estimator:
             self.samples, self.A, self.b, grid_n=grid_n
         )
         cont_end = time.perf_counter()
-        print(f"Time to compute 3D contour: {format_time(cont_end - cont_start)}")
+        print(f"Time to compute contours: {format_time(cont_end - cont_start)}")
 
+        plot_start = time.perf_counter()
         plot_contour_3D(
             d0,
             d1,
@@ -874,3 +928,6 @@ class Estimator:
             gif_name=gif_name,
             z_cont2=cont_max,
         )
+        plot_end = time.perf_counter()
+        print(f"time to plot contours in 3D: {format_time(plot_end - plot_start)}")
+

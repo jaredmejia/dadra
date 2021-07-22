@@ -87,9 +87,13 @@ def multi_p_norm(samples, p=2, const=None):
         raise ValueError("Samples must be of shape (num_samples, timesteps, state_dim")
     n_x = samples.shape[2]
     keys = ("A", "b", "status")
+    solve_p_norm_map = partial(solve_p_norm, n_x=n_x, p=p, const=const)
+    p = Pool(cpu_count())
     solutions = [
-        dict(zip(keys, solve_p_norm(sample, n_x, p, const)))
-        for sample in tqdm(samples.swapaxes(0, 1))
+        dict(zip(keys, sol))
+        for sol in tqdm(
+            p.imap(solve_p_norm_map, samples.swapaxes(0, 1)), total=samples.shape[1]
+        )
     ]
 
     return solutions

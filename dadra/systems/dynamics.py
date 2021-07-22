@@ -153,7 +153,7 @@ def quadrotor(x, t, g=9.81, R=0.1, l=0.5, M_rotor=0.1, M=1.0, u1=1.0, u2=0.0, u3
     :param x: 12 state input vector
     :type x: numpy.array
     :param t: The time
-    :type t: [type]
+    :type t: float
     :param g: The gravity constant, defaults to 9.81
     :type g: float, optional
     :param R: The radius of center mass, defaults to 0.1
@@ -217,5 +217,30 @@ def quadrotor(x, t, g=9.81, R=0.1, l=0.5, M_rotor=0.1, M=1.0, u1=1.0, u2=0.0, u3
     dx12 = (Jx - Jy) / Jz * x10 * x11 + 1 / Jz * tau_psi
 
     dx = [dx1, dx2, dx3, dx4, dx5, dx6, dx7, dx8, dx9, dx10, dx11, dx12]
+
+    return dx
+
+
+def laub_loomis(x, t):
+    """Defines the dynamics of the Laub-Loomis model based on initial states
+
+    :param x: 7 state input vector
+    :type x: numpy.array
+    :param t: The time
+    :type t: float
+    :return: The partial derivatives of the 7-state Laub-Loomis model
+    :rtype: list
+    """
+    x1, x2, x3, x4, x5, x6, x7 = x
+
+    dx1 = 1.4 * x3 - 0.9 * x1
+    dx2 = 2.5 * x5 - 1.5 * x2
+    dx3 = 0.6 * x7 - 0.8 * x2 * x3
+    dx4 = 2 - 1.3 * x3 * x4
+    dx5 = 0.7 * x1 - x4 * x5
+    dx6 = 0.3 * x1 - 3.1 * x6
+    dx7 = 1.8 * x6 - 1.5 * x2 * x7
+
+    dx = [dx1, dx2, dx3, dx4, dx5, dx6, dx7]
 
     return dx
