@@ -1,4 +1,3 @@
-from multiprocessing import Value
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
@@ -147,6 +146,117 @@ def plot_reach_time(
     plt.savefig(fig_name, bbox_inches="tight", facecolor="white")
 
 
+def plot_reach_time_2D(samples, all_p_norm, fig_name, **kwargs):
+    """Plots the reachable set estimate for two state variables across all timesteps, as well as possibly some samples.
+
+    :param samples: The samples to be plotted along with the reachable set estimate. An array of shape (num_samples, timesteps, 2)
+    :type samples: numpy.ndarray
+    :param all_p_norm: A list of tuples, each one containing two lists of x and y values corresponding to the coordinates included in the reachable set estimate at a given timestep
+    :type all_p_norm: list
+    :param fig_name: The name of the figure to be saved
+    :type fig_name: str
+    """
+    fig = plt.figure(figsize=kwargs.get("figsize", (10, 10)))
+    c1 = kwargs.get("c1", "palevioletred")
+    c2 = kwargs.get("c2", "lavenderblush")
+
+    min_vals_x, max_vals_x, min_vals_y, max_vals_y = [], [], [], []
+    for i in range(len(all_p_norm)):
+        xs, ys = all_p_norm[i][0], all_p_norm[i][1]
+        min_y = min(ys)
+        max_y = max(ys)
+        min_index = ys.index(min_y)
+        max_index = ys.index(max_y)
+        min_x = xs[min_index]
+        max_x = xs[max_index]
+        if i == 0:
+            for x, y in zip(xs, ys):
+                if x <= min_x:
+                    plt.plot(x, y, color=c1, marker=".", markersize=4)
+        elif i == len(all_p_norm) - 1:
+            for x, y in zip(xs, ys):
+                if x >= min_x:
+                    plt.plot(x, y, color=c1, marker=".", markersize=4)
+        min_vals_x.append(min_x)
+        min_vals_y.append(min_y)
+        max_vals_x.append(max_x)
+        max_vals_y.append(max_y)
+
+    plt.plot(min_vals_x, min_vals_y, color=c1)
+    plt.plot(max_vals_x, max_vals_y, color=c1)
+    plt.fill_between(max_vals_x, min_vals_y, max_vals_y, color=c1)
+    plt.fill_between(min_vals_x, min_vals_y, max_vals_y, color=c1)
+
+    for sample in samples:
+        plt.plot(sample[:, 0], sample[:, 1], color=c2, alpha=0.5)
+
+    xmin, xmax, ymin, ymax = plt.axis()
+    # assume kwargs are of the form {"x"=[1], "y"=[0.98, 1.4]}
+    for key in kwargs:
+        if key == "x":
+            for val in kwargs["x"]:
+                plt.plot([val, val], [ymin, ymax], "k", alpha=0.5)
+        elif key == "y":
+            for val in kwargs["y"]:
+                plt.plot([xmin, xmax], [val, val], "k", alpha=0.5)
+
+    plt.xlabel(kwargs.get("xlabel", "x"))
+    plt.ylabel(kwargs.get("ylabel", "y"))
+    plt.title(kwargs.get("title", "Reachable set estimate over time"))
+    plt.savefig(fig_name, bbox_inches="tight", facecolor="white")
+
+
+def plot_reach_time_3D(samples, tuple_list_3D, fig_name, gif_name=None, **kwargs):
+    """Plots the reachable set estimate for three state variables across all timesteps, as well as possibly some samples.
+
+    :param samples: The samples to be plotted along with the reachable set estimate. An array of shape (num_samples, timesteps, 3)
+    :type samples: numpy.ndarray
+    :param tuple_list_3D: A list of tuples, each one containing three lists of x, y, and z values corresponding to the coordinates included in the reachable set estimate at a given timestep
+    :type tuple_list_3D: list
+    :param fig_name: The name of the figure to be saved
+    :type fig_name: str
+    :param gif_name: The name of the gif to be saved, defaults to None
+    :type gif_name: str, optional
+    """
+    fig = plt.figure(figsize=kwargs.get("figsize", (10, 10)))
+    ax = plt.axes(projection="3d")
+    c1 = kwargs.get("c1", "cornflowerblue")
+
+    for x_list, y_list, z_list in tuple_list_3D:
+        ax.plot(x_list, y_list, z_list, alpha=0.2, color=c1, linewidth=10)
+
+    for sample in samples:
+        ax.plot(sample[:, 0], sample[:, 1], sample[:, 2])
+
+    if gif_name is not None:
+
+        def rotate(angle):
+            ax.view_init(azim=angle)
+
+        rot_animation = animation.FuncAnimation(
+            fig, rotate, frames=np.arange(0, 362, 2), interval=100
+        )
+        rot_animation.save(gif_name, dpi=100)
+
+    ax.set_xlabel(kwargs.get("xlabel", "x"))
+    ax.set_ylabel(kwargs.get("ylabel", "y"))
+    ax.set_zlabel(kwargs.get("zlabel", "z"))
+    ax.set_title(kwargs.get("title", "reachable set estimate over time"))
+    plt.savefig(fig_name, bbox_inches="tight", facecolor="white")
+
+
+def clover_leaf(t, V=13, r=4):
+    if t <= 0:
+        return [-t, 0, 0]
+    elif t >= 2:
+        return [0, -t, 0]
+    else:
+        x = 0.5 * r * np.sin(V / r * t) + r * np.sin(0.5 * V / r * t)
+        y = 0.5 * r * np.sin(V / r * t) - r * np.sin(0.5 * V / r * t)
+        z = -r + r * np.cos(V / r * t)
+        return [-x, -y, -z]
+
+
 def grow_plot_3d(samples, fig_name, gif_name, figsize, **kwargs):
     """Creates a gif of a three dimensional trajectory that is animated to grow over time
 
@@ -168,6 +278,21 @@ def grow_plot_3d(samples, fig_name, gif_name, figsize, **kwargs):
     for sample in samples:
         (line,) = ax.plot(sample[:, 0], sample[:, 1], sample[:, 2], alpha=0.8)
         lines.append(line)
+    #     ax.plot(sample[0, 0], sample[0, 1], sample[0, 2], marker="o", color="black")
+    #     ax.plot(sample[-1, 0], sample[-1, 1], sample[-1, 2], marker="o", color="black")
+
+    # xs = []
+    # ys = []
+    # zs = []
+    # for t in np.linspace(0, 6, 100):
+    #     p = clover_leaf(t - 2)
+    #     xs.append(p[0])
+    #     ys.append(p[1])
+    #     zs.append(p[2])
+
+    # ax.plot(xs[0], ys[0], zs[0], marker="o", color="purple")
+    # ax.plot(xs, ys, zs)
+    # ax.plot(xs[-1], ys[-1], zs[-1], marker="o", color="blue")
 
     if gif_name is not None:
         ax.set_xlabel(kwargs.get("xlabel", "x"))
@@ -295,7 +420,15 @@ def plot_contour_2D(
 
 
 def plot_contour_3D(
-    xv, yv, z_cont, z_min, z_max, sample, fig_name, gif_name=None, z_cont2=None,
+    xv,
+    yv,
+    z_cont,
+    z_min,
+    z_max,
+    sample,
+    fig_name,
+    gif_name=None,
+    z_cont2=None,
 ):
     """Plots the contours in 3D with the option for saving an animated gif of the rotating graph
 
@@ -342,10 +475,24 @@ def plot_contour_3D(
         levels_1 = list(np.linspace(abs_min, abs_avg, 25))
         levels_2 = list(np.linspace(abs_avg, abs_max, 25))
         ax.contour3D(
-            xv, yv, z_cont, 50, cmap="Blues", vmin=v_min, vmax=v_max, levels=levels_1,
+            xv,
+            yv,
+            z_cont,
+            50,
+            cmap="Blues",
+            vmin=v_min,
+            vmax=v_max,
+            levels=levels_1,
         )
         ax.contour3D(
-            xv, yv, z_cont2, 50, cmap="Blues", vmin=v_min, vmax=v_max, levels=levels_2,
+            xv,
+            yv,
+            z_cont2,
+            50,
+            cmap="Blues",
+            vmin=v_min,
+            vmax=v_max,
+            levels=levels_2,
         )
 
     ax.set_xlabel("x")

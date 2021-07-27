@@ -350,8 +350,11 @@ def p_compute_vals(sample, A_val, b_val, p=2, grid_n=200):
 
     vals = []
     for v in y:
-        if np.linalg.norm(A_val @ np.array([[v]]) - b_val, ord=p) <= 1:
-            vals.append(v)
+        try:
+            if np.linalg.norm(A_val @ np.array([[v]]) - b_val, ord=p) <= 1:
+                vals.append(v)
+        except ValueError:
+            pass
     return vals
 
 
@@ -448,3 +451,83 @@ def p_emp_estimate(samples, A_val, b_val, n_x=3, p=2):
         if np.linalg.norm(A_val @ vec - b_val, ord=p) <= 1:
             count += 1
     return count / num_samples
+
+
+def p_get_reachable_2D(samples, A_val, b_val, p=2, grid_n=50):
+    """Obtains the reachable set estimate for a set of samples at a give timestep. A utility function for plotting the reachable set estimate across all timesteps for two state variables.
+
+    :param samples: Samples of shape (num_samples, 2)
+    :type samples: numpy.ndarray
+    :param A_val: Matrix corresponding to the reachable set estimate at a given timestep for two state variables, a (2, 2) array
+    :type A_val: numpy.ndarray
+    :param b_val: Vector corresponding to the reachable set estimate at a given timestep for two state variables, a (2, 1) array
+    :type b_val: numpy.ndarray
+    :param p: The order of the p-norm ball, defaults to 2
+    :type p: int, optional
+    :param grid_n: The side length of the square of points to be used for checking for points inside the p-norm ball, defaults to 50
+    :type grid_n: int, optional
+    :return: The x and y values included in the p-norm ball
+    :rtype: tuple
+    """
+    x_min, x_max = samples[:, 0].min(), samples[:, 0].max()
+    y_min, y_max = samples[:, 1].min(), samples[:, 1].max()
+
+    x = np.linspace(
+        x_min - 0.4 * (x_max - x_min), x_max + 0.4 * (x_max - x_min), grid_n
+    )
+    y = np.linspace(
+        y_min - 0.4 * (y_max - y_min), y_max + 0.4 * (y_max - y_min), grid_n
+    )
+
+    d0, d1 = np.meshgrid(x, y)
+    d2 = np.array([d0.flatten(), d1.flatten()]).T
+
+    xs, ys = [], []
+    for pair in d2:
+        if np.linalg.norm(A_val @ pair.reshape((2, 1)) - b_val, ord=p) <= 1:
+            xs.append(pair[0])
+            ys.append(pair[1])
+
+    return xs, ys
+
+def p_get_reachable_3D(samples, A_val, b_val, p=2, grid_n=25):
+    """Obtains the reachable set estimate for a set of samples at a give timestep. A utility function for plotting the reachable set estimate across all timesteps for three state variables.
+
+    :param samples: Samples of shape (num_samples, 3)
+    :type samples: numpy.ndarray
+    :param A_val: Matrix corresponding to the reachable set estimate at a given timestep for two state variables, a (3, 3) array
+    :type A_val: numpy.ndarray
+    :param b_val: Vector corresponding to the reachable set estimate at a given timestep for two state variables, a (3, 1) array
+    :type b_val: numpy.ndarray
+    :param p: The order of the p-norm ball, defaults to 2
+    :type p: int, optional
+    :param grid_n: The side length of the square of points to be used for checking for points inside the p-norm ball, defaults to 50
+    :type grid_n: int, optional
+    :return: The x and y values included in the p-norm ball
+    :rtype: tuple
+    """
+    x_min, x_max = samples[:, 0].min(), samples[:, 0].max()
+    y_min, y_max = samples[:, 1].min(), samples[:, 1].max()
+    z_min, z_max = samples[:, 2].min(), samples[:, 2].max()
+
+    x = np.linspace(
+        x_min - 0.4 * (x_max - x_min), x_max + 0.4 * (x_max - x_min), grid_n
+    )
+    y = np.linspace(
+        y_min - 0.4 * (y_max - y_min), y_max + 0.4 * (y_max - y_min), grid_n
+    )
+    z = np.linspace(
+        z_min - 0.4 * (z_max - z_min), z_max + 0.4 * (z_max - z_min), grid_n
+    )
+    
+    d0, d1, d2 = np.meshgrid(x, y, z)
+    d3 = np.array([d0.flatten(), d1.flatten(), d2.flatten()]).T
+    
+    xs, ys, zs = [], [], []
+    for trio in d3:
+        if np.linalg.norm(A_val @ trio.reshape((3, 1)) - b_val, ord=p) <= 1:
+            xs.append(trio[0])
+            ys.append(trio[1])
+            zs.append(trio[2])
+    
+    return xs, ys, zs

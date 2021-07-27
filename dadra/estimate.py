@@ -1,4 +1,3 @@
-from functools import partial
 import numpy as np
 import time
 import warnings
@@ -10,6 +9,8 @@ from dadra.utils.graph_utils import (
     plot_contour_3D,
     plot_contour_3D_time,
     plot_reach_time,
+    plot_reach_time_2D,
+    plot_reach_time_3D,
     plot_sample,
     plot_sample_time,
 )
@@ -29,9 +30,14 @@ from dadra.utils.p_utils import (
     p_dict_list,
     p_emp_estimate,
     p_get_dict,
+    p_get_reachable_2D,
+    p_get_reachable_3D,
     p_num_samples,
     solve_p_norm,
 )
+from functools import partial
+from multiprocessing import Pool, cpu_count
+from tqdm.auto import trange
 
 
 class Estimator:
@@ -491,7 +497,7 @@ class Estimator:
             )
 
             start_check = time.perf_counter()
-            self.check_statuses(solution_list)
+            solution_list = self.check_statuses(solution_list)
             end_check = time.perf_counter()
 
             print(
@@ -521,14 +527,23 @@ class Estimator:
         self.num_opt_in = 0
         self.num_fail = 0
         s_list = solution_list if solution_list is not None else self.solution_list
-        for d in s_list:
-            status = d["status"]
+        failed_indices = []
+        for i in range(len(s_list)):
+            status = s_list[i]["status"]
             if status == "optimal":
                 self.num_opt += 1
             elif status == "optimal_inaccurate":
                 self.num_opt_in += 1
             else:
                 self.num_fail += 1
+                failed_indices.append(i)
+        print(f"{failed_indices=}")
+        s_list = [j for k, j in enumerate(s_list) if k not in failed_indices]
+        if self.iso_samples is not None:
+            self.iso_samples = np.delete(self.iso_samples, failed_indices, axis=1)
+        else:
+            self.samples = np.delete(self.samples, failed_indices, axis=1)
+        return s_list
 
     def construct_christoffel(self):
         """Constructs the inverse Christoffel function and the respective level parameter from the samples
@@ -742,6 +757,22 @@ class Estimator:
                     f"Cannot handle samples of shape: {self.iso_samples.shape}"
                 )
 
+    def get_reachable_3D(self, i):
+        if self.solution_list is None:
+            raise ValueError("Reachable set estimate has not been computed yet")
+
+        curr_samples = (
+            self.iso_samples if self.iso_samples is not None else self.samples
+        )
+        curr_solution = self.solution_list[i]
+
+        return p_get_reachable_3D(
+            curr_samples[:, i, :],
+            curr_solution["A"],
+            curr_solution["b"],
+            grid_n=50,
+        )
+
     def plot_reachable_time(
         self,
         fig_name,
@@ -781,13 +812,16 @@ class Estimator:
         if len(curr_samples.shape) == 2:
             plot_start = time.perf_counter()
             min_vals, max_vals = [], []
-            for i in range(self.dyn_sys.parts):
+            for i in range(len(self.solution_list)):
                 A_i, b_i = self.solution_list[i]["A"], self.solution_list[i]["b"]
                 vals_i = p_compute_vals(curr_samples[:, i], A_i, b_i, grid_n=grid_n)
-                min_vals.append(min(vals_i))
-                max_vals.append(max(vals_i))
+                try:
+                    min_vals.append(min(vals_i))
+                    max_vals.append(max(vals_i))
+                except ValueError:
+                    print(f"{i=}")
 
-            time_x = np.linspace(0, self.dyn_sys.timesteps, self.dyn_sys.parts)
+            time_x = np.linspace(0, self.dyn_sys.timesteps, len(self.solution_list))
 
             plot_reach_time(
                 time_x,
@@ -806,29 +840,57 @@ class Estimator:
 
         elif len(curr_samples.shape) == 3 and curr_samples.shape[2] == 2:
             plot_start = time.perf_counter()
+            all_p_norm = []
+            for i in range(len(self.solution_list)):
+                xs, ys = p_get_reachable_2D(
+                    curr_samples[:, i, :],
+                    self.solution_list[i]["A"],
+                    self.solution_list[i]["b"],
+                    p=2,
+                    grid_n=grid_n,
+                )
+                all_p_norm.append((xs, ys))
+
+            plot_reach_time_2D(
+                curr_samples[:num_samples_show], all_p_norm, fig_name, **kwargs
+            )
             plot_end = time.perf_counter()
             print(
                 f"time to plot 2D samples with respect to time: {format_time(plot_end - plot_start)}"
             )
 
         elif len(curr_samples.shape) == 3 and curr_samples.shape[2] == 3:
-            plot_start = time.perf_counter()
-            dict_list = p_dict_list(
-                curr_samples,
-                self.solution_list,
-                self.dyn_sys.parts,
-                num_indices=20,
-                logspace=True,
-                grid_n=grid_n,
+            p = Pool(cpu_count())
+            start_solve = time.perf_counter()
+            tuple_list_3D = p.map(
+                self.get_reachable_3D, trange(len(self.solution_list))
             )
-            plot_contour_3D_time(
+            end_solve = time.perf_counter()
+            print(f"time to get reachable set: {format_time(end_solve - start_solve)}")
+            plot_start = time.perf_counter()
+            plot_reach_time_3D(
                 curr_samples[:num_samples_show],
-                dict_list,
+                tuple_list_3D,
                 fig_name,
-                gif_name,
-                figsize,
+                gif_name=gif_name,
                 **kwargs,
             )
+            # dict_list = p_dict_list(
+            #     curr_samples,
+            #     self.solution_list,
+            #     self.dyn_sys.parts,
+            #     num_indices=20,
+            #     logspace=True,
+            #     grid_n=grid_n,
+            # )
+            # plot_contour_3D_time(
+            #     curr_samples[:num_samples_show],
+            #     dict_list,
+            #     fig_name,
+            #     gif_name,
+            #     figsize,
+            #     **kwargs,
+            # )
             plot_end = time.perf_counter()
             print(
                 f"time to plot 3D samples with respect to time: {format_time(plot_end - plot_start)}"
@@ -930,4 +992,3 @@ class Estimator:
         )
         plot_end = time.perf_counter()
         print(f"time to plot contours in 3D: {format_time(plot_end - plot_start)}")
-
