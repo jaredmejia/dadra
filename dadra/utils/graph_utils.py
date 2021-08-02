@@ -220,28 +220,52 @@ def plot_reach_time_3D(samples, tuple_list_3D, fig_name, gif_name=None, **kwargs
     """
     fig = plt.figure(figsize=kwargs.get("figsize", (10, 10)))
     ax = plt.axes(projection="3d")
+
     c1 = kwargs.get("c1", "cornflowerblue")
+    surface = kwargs.get("surface", None)
+
+    if surface is not None:
+        min_z = np.min(surface[2])
+        max_z = np.max(surface[2])
+
+        ax.plot_surface(
+            surface[0],
+            surface[1],
+            surface[2],
+            cmap="binary",
+            vmin=min_z - 0.15 * (max_z - min_z),
+            vmax=max_z,
+            alpha=0.8,
+        )
+
+    line = kwargs.get("line", None)
+    if line is not None:
+        ax.plot(line[0], line[1], line[2], color="black", alpha=1.0)
 
     for x_list, y_list, z_list in tuple_list_3D:
-        ax.plot(x_list, y_list, z_list, alpha=0.2, color=c1, linewidth=10)
+        ax.plot(x_list, y_list, z_list, alpha=0.8, color=c1, linewidth=10)
 
     for sample in samples:
-        ax.plot(sample[:, 0], sample[:, 1], sample[:, 2])
+        ax.plot(sample[:, 0], sample[:, 1], sample[:, 2], alpha=0.9)
+        ax.plot(sample[0, 0], sample[0, 1], sample[0, 2], marker="o", color="green")
+        ax.plot(sample[-1, 0], sample[-1, 1], sample[-1, 2], marker="o", color="red")
+
+    ax.set_xlabel(kwargs.get("xlabel", "x"))
+    ax.set_ylabel(kwargs.get("ylabel", "y"))
+    ax.set_zlabel(kwargs.get("zlabel", "z"))
+    ax.set_title(kwargs.get("title", "reachable set estimate over time"))
+    ax.view_init(elev=kwargs.get("elev", 30), azim=kwargs.get("azim", -30))
 
     if gif_name is not None:
 
         def rotate(angle):
-            ax.view_init(azim=angle)
+            ax.view_init(elev=kwargs.get("elev", 30), azim=angle)
 
         rot_animation = animation.FuncAnimation(
             fig, rotate, frames=np.arange(0, 362, 2), interval=100
         )
         rot_animation.save(gif_name, dpi=100)
 
-    ax.set_xlabel(kwargs.get("xlabel", "x"))
-    ax.set_ylabel(kwargs.get("ylabel", "y"))
-    ax.set_zlabel(kwargs.get("zlabel", "z"))
-    ax.set_title(kwargs.get("title", "reachable set estimate over time"))
     plt.savefig(fig_name, bbox_inches="tight", facecolor="white")
 
 
@@ -274,25 +298,33 @@ def grow_plot_3d(samples, fig_name, gif_name, figsize, **kwargs):
     fig = plt.figure(figsize=figsize)
     ax = plt.axes(projection="3d")
 
+    surface = kwargs.get("surface", None)
+    if surface is not None:
+        min_z = np.min(surface[2])
+        max_z = np.max(surface[2])
+
+        ax.plot_surface(
+            surface[0],
+            surface[1],
+            surface[2],
+            cmap="binary",
+            vmin=min_z - 0.15 * (max_z - min_z),
+            vmax=max_z,
+            alpha=0.8,
+        )
+
+    line = kwargs.get("line", None)
+    if line is not None:
+        ax.plot(line[0], line[1], line[2], color="black", alpha=1.0)
+
     lines = []
     for sample in samples:
-        (line,) = ax.plot(sample[:, 0], sample[:, 1], sample[:, 2], alpha=0.8)
+        (line,) = ax.plot(sample[:, 0], sample[:, 1], sample[:, 2], alpha=0.9)
         lines.append(line)
-    #     ax.plot(sample[0, 0], sample[0, 1], sample[0, 2], marker="o", color="black")
-    #     ax.plot(sample[-1, 0], sample[-1, 1], sample[-1, 2], marker="o", color="black")
+        ax.plot(sample[0, 0], sample[0, 1], sample[0, 2], marker="o", color="green")
+        ax.plot(sample[-1, 0], sample[-1, 1], sample[-1, 2], marker="o", color="red")
 
-    # xs = []
-    # ys = []
-    # zs = []
-    # for t in np.linspace(0, 6, 100):
-    #     p = clover_leaf(t - 2)
-    #     xs.append(p[0])
-    #     ys.append(p[1])
-    #     zs.append(p[2])
-
-    # ax.plot(xs[0], ys[0], zs[0], marker="o", color="purple")
-    # ax.plot(xs, ys, zs)
-    # ax.plot(xs[-1], ys[-1], zs[-1], marker="o", color="blue")
+    ax.view_init(elev=kwargs.get("elev", 30), azim=kwargs.get("azim", 45))
 
     if gif_name is not None:
         ax.set_xlabel(kwargs.get("xlabel", "x"))
@@ -316,7 +348,7 @@ def grow_plot_3d(samples, fig_name, gif_name, figsize, **kwargs):
                 line.set_xdata(sample[:num, 0])
                 line.set_ydata(sample[:num, 1])
                 line.set_3d_properties(sample[:num, 2])
-            ax.view_init(azim=num)
+            ax.view_init(elev=kwargs.get("elev", 30), azim=num)
             return lines
 
         ani = animation.FuncAnimation(

@@ -302,8 +302,19 @@ class Sampler(System):
     """
 
     def __init__(self, sample_fn, state_dim, timesteps, parts, all_time):
-        self.sample_system = make_sample_n(sample_fn)
+        # self.sample_system = make_sample_n(sample_fn)
+        self.sample_fn = sample_fn
         self.state_dim = state_dim
         self.timesteps = timesteps
         self.parts = parts
         self.all_time = all_time
+
+    def sample_system(self, N):
+        """Draws ``N`` samples from the specified system
+
+        :param N: The number of samples to be drawn
+        :type N: int
+        :return: Array of ``N`` samples
+        :rtype: numpy.ndarray
+        """
+        return make_sample_n(self.sample_fn)(N)

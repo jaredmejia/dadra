@@ -679,7 +679,7 @@ class Estimator:
         self,
         fig_name,
         gif_name=None,
-        max_num_samples=100,
+        num_samples_show=100,
         figsize=(10, 10),
         color="default",
         **kwargs,
@@ -690,8 +690,8 @@ class Estimator:
         :type fig_name: str
         :param gif_name: The name of the animated gif to be saved, only applicable for 3-dimensional plots when all_time is True, defaults to None
         :type gif_name: str, optional
-        :param max_num_samples: The maximum number of samples to plot, defaults to 100
-        :type max_num_samples: int, optional
+        :param num_samples_show: The maximum number of samples to plot, defaults to 100
+        :type num_samples_show: int, optional
         :param figsize: the size of the figure to be saved, defaults to (10, 10)
         :type figsize: tuple, optional
         :param color: The color to draw the lines in, defaults to "default"
@@ -700,7 +700,7 @@ class Estimator:
         """
         if not self.dyn_sys.all_time and self.iso_dim is None:
             plot_start = time.perf_counter()
-            plot_sample(self.samples[:max_num_samples], fig_name)
+            plot_sample(self.samples[:num_samples_show], fig_name)
             plot_end = time.perf_counter()
             print(f"Time to plot samples: {format_time(plot_end - plot_start)}")
         else:
@@ -714,7 +714,7 @@ class Estimator:
 
                 plot_sample_time(
                     time_x,
-                    sample_squeezed[:max_num_samples],
+                    sample_squeezed[:num_samples_show],
                     fig_name,
                     figsize=figsize,
                     color=color,
@@ -741,7 +741,7 @@ class Estimator:
             elif len(self.iso_samples.shape) == 3 and self.iso_samples.shape[2] == 3:
                 plot_start = time.perf_counter()
                 grow_plot_3d(
-                    self.iso_samples[:max_num_samples],
+                    self.iso_samples[:num_samples_show],
                     fig_name,
                     gif_name,
                     figsize,
@@ -757,7 +757,7 @@ class Estimator:
                     f"Cannot handle samples of shape: {self.iso_samples.shape}"
                 )
 
-    def get_reachable_3D(self, i):
+    def get_reachable_3D(self, i, grid_n=25):
         if self.solution_list is None:
             raise ValueError("Reachable set estimate has not been computed yet")
 
@@ -770,7 +770,7 @@ class Estimator:
             curr_samples[:, i, :],
             curr_solution["A"],
             curr_solution["b"],
-            grid_n=50,
+            grid_n=grid_n,
         )
 
     def plot_reachable_time(
