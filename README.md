@@ -1,4 +1,6 @@
-# **DaDRA**: Python Library for Data-Driven Reachability Analysis
+<img src="imgs/big_dadra_logo.png" width="400">
+
+# Python Library for Data-Driven Reachability Analysis
 [![Documentation Status](https://readthedocs.org/projects/dadra/badge/?version=latest)](https://dadra.readthedocs.io/en/latest/?badge=latest)
 [![PyPI Latest Release](https://img.shields.io/pypi/v/dadra.svg)](https://pypi.org/project/dadra/)
 [![Conda Latest Release](https://anaconda.org/jaredmejia/dadra/badges/version.svg)](https://anaconda.org/jaredmejia/dadra)
@@ -8,7 +10,6 @@
 <p float="left">
   <img src="imgs/l_3D_cont.gif" width="300" height="300">
   <img src="imgs/quad_reachable.png" width="300" height="300">
-  <img src="imgs/q_3d.gif" width="300" height="300">
 </p>
 
 ## What is it?
