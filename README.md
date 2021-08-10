@@ -1,4 +1,4 @@
-<img src="imgs/big_dadra_logo.png" width="400">
+<img src="https://github.com/JaredMejia/dadra/blob/1b84928cc6672fb5beb2d98fb6572342cc6d713c/imgs/big_dadra_logo.png?raw=true" width="400">
 
 # Python Library for Data-Driven Reachability Analysis
 [![Documentation Status](https://readthedocs.org/projects/dadra/badge/?version=latest)](https://dadra.readthedocs.io/en/latest/?badge=latest)
@@ -8,12 +8,12 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 <p float="left">
-  <img src="imgs/l_3D_cont.gif" width="300" height="300">
-  <img src="imgs/quad_reachable.png" width="300" height="300">
+  <img src="https://github.com/JaredMejia/dadra/blob/1b84928cc6672fb5beb2d98fb6572342cc6d713c/imgs/l_3D_cont.gif?raw=true" width="300" height="300">
+  <img src="https://github.com/JaredMejia/dadra/blob/1b84928cc6672fb5beb2d98fb6572342cc6d713c/imgs/quad_reachable.png?raw=true" width="300" height="300">
 </p>
 
 ## What is it?
-**DaDRA** (day-druh) is a Python library for Data-Driven Reachability Analysis. The main goal of the package is to accelerate the process of computing estimates of forward reachable sets for nonlinear dynamical systems.
+**DaDRA** (day-druh) is a Python library for Data-Driven Reachability Analysis. The main goal of the package is to accelerate the process of computing estimates of forward reachable sets for nonlinear dynamical systems. For more information about the library, see [this poster from the NSF funded SUPERB Program](https://github.com/JaredMejia/dadra/blob/34042b23cda31c6b0ba7c8acfe7f379ea4c6c434/imgs/SUPERB_DADRA_poster.png)
 
 ## Installation
 To install the current release of DaDRA:
