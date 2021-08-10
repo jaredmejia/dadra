@@ -108,9 +108,11 @@ class Estimator:
 
         self.normalize = normalize
         self.num_samples = self.get_num_samples()
-
         self.samples = None
-        self.iso_dim = None
+        self.iso_dim = (
+            iso_dim if isinstance(iso_dim, list) or iso_dim is None else [iso_dim]
+        )
+        self.num_iso_samples = self.get_num_samples(iso=True)
 
         if not christoffel:
             if not self.dyn_sys.all_time:
@@ -118,12 +120,6 @@ class Estimator:
                 self.b = None
                 self.status = None
             else:
-                self.iso_dim = (
-                    iso_dim
-                    if isinstance(iso_dim, list) or iso_dim is None
-                    else [iso_dim]
-                )
-                self.num_iso_samples = self.get_num_samples(iso=True)
                 self.solution_list = None
                 self.num_opt = None
                 self.num_opt_in = None
@@ -425,7 +421,10 @@ class Estimator:
         print(f"Shape of all samples: {self.samples.shape}")
 
         if self.iso_dim is not None:
-            self.iso_samples = self.samples[: self.num_iso_samples, :, self.iso_dim]
+            if self.dyn_sys.all_time:
+                self.iso_samples = self.samples[: self.num_iso_samples, :, self.iso_dim]
+            else:
+                self.iso_samples = self.samples[: self.num_iso_samples, self.iso_dim]
             print(f"Shape of dimension reduced samples: {self.iso_samples.shape}")
 
     def set_iso_dim(self, iso_dim):
@@ -551,15 +550,16 @@ class Estimator:
         :return: the inverse Christoffel function and the level parameter
         :rtype: tuple
         """
+        curr_samples = self.samples if self.iso_dim is None else self.iso_samples
         if self.kernelized:
             C = construct_kernelized_inv_christoffel(
-                self.samples, self.d, rho=self.rho, rbf=self.rbf, scale=self.scale
+                curr_samples, self.d, rho=self.rho, rbf=self.rbf, scale=self.scale
             )
         else:
-            C = construct_inv_christoffel(self.samples, self.d)
+            C = construct_inv_christoffel(curr_samples, self.d)
 
         start_lvl_param = time.perf_counter()
-        values = C(self.samples)
+        values = C(curr_samples)
         level = np.max(values)
         end_lvl_param = time.perf_counter()
         print(
@@ -698,9 +698,10 @@ class Estimator:
         :type color: str, optional
         :raises ValueError: If the samples are of an incompatible shape
         """
-        if not self.dyn_sys.all_time and self.iso_dim is None:
+        if not self.dyn_sys.all_time:
+            curr_samples = self.samples if self.iso_dim is None else self.iso_samples
             plot_start = time.perf_counter()
-            plot_sample(self.samples[:num_samples_show], fig_name)
+            plot_sample(curr_samples[:num_samples_show], fig_name)
             plot_end = time.perf_counter()
             print(f"Time to plot samples: {format_time(plot_end - plot_start)}")
         else:
@@ -758,8 +759,9 @@ class Estimator:
                 )
 
     def get_reachable_3D(self, i, grid_n=25):
-        if self.solution_list is None:
-            raise ValueError("Reachable set estimate has not been computed yet")
+
+        if not hasattr(self, "solution_list"):
+            raise ValueError("3D reachable set estimate has not been computed yet")
 
         curr_samples = (
             self.iso_samples if self.iso_samples is not None else self.samples
@@ -796,7 +798,7 @@ class Estimator:
         :type figsize: tuple, optional
         """
         if not self.dyn_sys.all_time:
-            warnings.warn(
+            raise ValueError(
                 "`plot_reachable_time` is meant for samples across all timesteps"
             )
 
@@ -909,10 +911,11 @@ class Estimator:
         :param grid_n: The side length of the cube of points to be used for computing contours, defaults to 200
         :type grid_n: int
         """
+        curr_samples = self.samples if self.iso_dim is None else self.iso_samples
         if not self.christoffel:
             cont_compute = partial(
                 p_compute_contour_2D,
-                sample=self.samples,
+                sample=curr_samples,
                 A_val=self.A,
                 b_val=self.b,
                 n_x=self.dyn_sys.state_dim,
@@ -934,7 +937,7 @@ class Estimator:
                 yv1,
                 z_cont,
                 z_max,
-                self.samples,
+                curr_samples,
                 fig_name,
                 xv2=xv2,
                 zv1=zv1,
@@ -950,13 +953,13 @@ class Estimator:
 
         else:
             start_comp_cont = time.perf_counter()
-            xv, yv, cont = c_compute_contours(self.C, self.samples, grid_n)
+            xv, yv, cont = c_compute_contours(self.C, curr_samples, grid_n)
             end_comp_cont = time.perf_counter()
             print(
                 f"Time to compute contour: {format_time(end_comp_cont - start_comp_cont)}"
             )
             plot_start = time.perf_counter()
-            plot_contour_2D(xv, yv, cont, self.level, self.samples, fig_name)
+            plot_contour_2D(xv, yv, cont, self.level, curr_samples, fig_name)
             plot_end = time.perf_counter()
             print(f"time to plot contours in 2D: {format_time(plot_end - plot_start)}")
 
@@ -970,6 +973,16 @@ class Estimator:
         :param gif_name: The name of the file to save the gif to, defaults to None
         :type gif_name: str, optional
         """
+        if self.dyn_sys.all_time:
+            raise ValueError(
+                "`plot_3D_cont` is meant for systems at a specific time, `all_time` must be False"
+            )
+
+        conds = [not hasattr(self, "iso_samples") and self.samples.shape[1] != 3]
+        conds.append(hasattr(self, "iso_samples") and self.iso_samples.shape[1] != 3)
+        if any(conds):
+            raise ValueError("The system of interest must be 3-dimensional")
+
         print("Computing 3D contour")
         cont_start = time.perf_counter()
         d0, d1, cont_min, cont_max, c_min, c_max = p_compute_contour_3D(
