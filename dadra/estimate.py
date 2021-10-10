@@ -36,7 +36,7 @@ from dadra.utils.p_utils import (
     solve_p_norm,
 )
 from functools import partial
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool, Value, cpu_count
 from tqdm.auto import trange
 
 
@@ -1005,3 +1005,28 @@ class Estimator:
         )
         plot_end = time.perf_counter()
         print(f"time to plot contours in 3D: {format_time(plot_end - plot_start)}")
+
+
+    def plot_reachable(self, fig_name, grid_n=100, gif_name=None):
+        """
+        Plots the reachable set across 2 or 3 dimensions
+        """
+        if self.dyn_sys.all_time:
+            raise ValueError(
+                "`plot_reachable` is meant for systems at a specific time, `all_time` must be False"
+            )
+
+        if not hasattr(self, "iso_samples"):
+            if self.samples.shape[1] == 2:
+                self.plot_2D_cont(fig_name, grid_n)
+            elif self.samples.shape[1] == 3:
+                self.plot_3D_cont(fig_name, grid_n, gif_name)
+            else:
+                raise ValueError("The number of dimensions of the isolated samples must be either 2 or 3")
+        else:
+            if self.iso_samples.shape[1] == 2:
+                self.plot_2D_cont(fig_name, grid_n)
+            elif self.samples.shape[1] == 3:
+                self.plot_3D_cont(fig_name, grid_n, gif_name)
+            else:
+                raise ValueError("The number of dimensions of the isolated samples must be either 2 or 3")
